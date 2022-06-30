@@ -2,7 +2,6 @@ import json
 
 import requests as rq
 
-from os import getcwd
 from API_KEY import API_KEY
 
 
