@@ -1,6 +1,8 @@
-import requests as rq
 import json
-from STIM_Module.API_KEY import API_KEY
+
+import requests as rq
+
+from API_KEY import API_KEY
 
 
 class Summoner:
@@ -20,7 +22,6 @@ class Summoner:
             return summoner_data
         else:
             print("ERROR FOUND --- CODE: " + str(response.status_code))
-            return "XXX"
 
     def get_recent_game_ids(self, num_games):
         response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + self.puuid +
@@ -36,6 +37,7 @@ class Summoner:
     def get_specific_game_id(self, index_game):
         response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + self.puuid +
                           "/ids?start=" + str(index_game) + "&count=1&api_key=" + self.API_KEY)
+
         if response.status_code == 200:
             specific_game_id = json.loads(json.dumps(response.json()))
             return specific_game_id[0]

@@ -1,7 +1,10 @@
+import summoner
+import game
 
 
 def main():
-	print("This is where our main loop will be")
+    print("this is the entry point for the program")
+
 
 if __name__ == "__main__":
-	main()
+    main()
