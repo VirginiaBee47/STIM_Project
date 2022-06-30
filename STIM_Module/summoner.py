@@ -1,7 +1,6 @@
 import requests as rq
 import json
-
-API_KEY = "RGAPI-89916bde-63e6-4900-a1e6-df36bc44345e"
+from STIM_Module.API_KEY import API_KEY
 
 
 class Summoner:
