@@ -5,6 +5,17 @@ import requests as rq
 from API_KEY import API_KEY
 
 
+def get_recent_game_ids(puuid, num_games):
+    response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + puuid +
+                      "/ids?start=0&count=" + str(num_games) + "&api_key=" + API_KEY)
+
+    if response.status_code == 200:
+        return json.loads(json.dumps(response.json()))
+    else:
+        print("ERROR FOUND --- CODE: " + str(response.status_code))
+        return []
+
+
 class Summoner:
     def __init__(self, summoner_name):
         self.API_KEY = API_KEY
