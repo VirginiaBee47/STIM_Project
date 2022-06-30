@@ -1,11 +1,14 @@
 from summoner import Summoner
 from game import Game
+from api_funcs import *
+from data_processing import *
 
 
 def main():
-    test_summoner = Summoner("bEANS47")
-    test_game = Game(*test_summoner.get_recent_game_ids(1))
-    print(test_game.raw_game_data)
+    puuid = Summoner("bEANS47").puuid
+    game_id = get_recent_game_ids(puuid, 1)[0]
+    raw_game_data, raw_game_timeline_data = get_raw_game_data(game_id)
+    get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid)
 
 
 if __name__ == '__main__':
