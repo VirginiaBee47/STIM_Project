@@ -1,27 +1,18 @@
+import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
 
 def gold_graph():
-    gold_nums = []
-    min_markers = []
-    for i in range(0,16):
-        temp = i*23
-        if (i % 3 == 0):
-            temp = (i-1) * 23
-        gold_nums.append(temp)
-        min_markers.append(i)
-    my_graph = plt.plot(min_markers, gold_nums)
-    #plt.show()
-    return my_graph
+    my_DF = pd.read_csv(".\\test.csv", header=0, delimiter="\t", usecols=["Minute", "Total Gold"])
+    return my_DF
 
 def exp_graph():
-    exp_nums = []
-    min_markers = []
-    for i in range(0,16):
-        temp = i*23
-        if (i % 3 == 0):
-            temp = (i-1) * 242
-        exp_nums.append(temp)
-        min_markers.append(i)
+    my_DF = pd.read_csv(".\\test.csv", header=0, delimiter="\t", usecols=["Minute", "Total Exp"])
+    return my_DF
 
 
+def diff_graph():
+    my_DF = pd.read_csv(".\\test.csv", header=0, delimiter="\t", usecols=["Minute", "Gold Diff"])
+
+    return my_DF
