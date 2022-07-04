@@ -16,6 +16,20 @@ def get_recent_game_ids(puuid, num_games):
         return []
 
 
+def get_opponent_puuid(raw_game_data, user_puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(user_puuid)
+    summoner_position = raw_game_data['info']['participants'][summoner_index]['teamPosition']
+
+    if summoner_position == "":
+        return None
+    else:
+        (possible_opponent_indices := [i for i in range(0, 9)]).remove(summoner_index)
+        for i in possible_opponent_indices:
+            if raw_game_data['info']['participants'][i]['teamPosition'] == summoner_position:
+                return raw_game_data['metadata']['participants'][i]
+        return None
+
+
 class Summoner:
     def __init__(self, summoner_name):
         self.API_KEY = API_KEY

@@ -17,7 +17,7 @@ def check_summoner_exists(summoner_name):
         return False
 
 
-def get_game_csv(summoner_name, num_games=1):
+def make_game_csv(summoner_name, num_games=1):
     response = rq.get("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summoner_name +
                       "?api_key=" + API_KEY)
 
