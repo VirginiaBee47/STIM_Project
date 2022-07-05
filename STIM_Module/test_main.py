@@ -5,7 +5,7 @@ from data_processing import *
 
 
 def main():
-    puuid = Summoner("bEANS47").puuid
+    puuid = get_summoner("bEANS47")[0]
     game_id = get_recent_game_ids(puuid, 1)[0]
     raw_game_data, raw_game_timeline_data = get_raw_game_data(game_id)
     print(*get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid), sep="\n")
