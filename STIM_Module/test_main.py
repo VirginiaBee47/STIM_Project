@@ -1,5 +1,5 @@
 from summoner import *
-from game import Game
+from game import *
 from user import *
 from api_funcs import *
 from data_processing import *
@@ -14,7 +14,7 @@ def main():
     print(*get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, opponent_puuid), sep="\n")
     print(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid))
 
-    save_user("bEANS47")
+    save_user("bEANS47", windowsize=24, bignumber=349392, test_str='poopoo')
     print(load_user("bEANS47"))
 
 

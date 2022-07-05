@@ -1,8 +1,11 @@
 import json
 
 
-def save_user(username):
-    user = {'name': username}
+def save_user(username, **kwargs):
+    user = {'name': username, 'settings': {}}
+
+    for key, value in kwargs.items():
+        user['settings'][key] = value
 
     with open("user_settings\\user_%s.json" % username, 'w') as outfile:
         json.dump(user, outfile)
