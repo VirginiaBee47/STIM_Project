@@ -2,6 +2,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+
 # TODO: Turn these three functions into one with more arguments, Refactor application.py yay
 
 def ret_graph(type="g"):
