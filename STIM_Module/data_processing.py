@@ -3,7 +3,7 @@ from datetime import datetime as dt
 from summoner import get_opponent_puuid
 
 
-def get_game_stats(raw_game_data, raw_game_timeline_data):
+def get_game_stats(raw_game_data):
     game_mode = raw_game_data['info']['gameMode']
     game_map = raw_game_data['info']['mapId']
     game_date_time = dt.fromtimestamp(round(float(raw_game_data['info']['gameStartTimestamp']) / 1000, 0))
