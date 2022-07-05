@@ -1,24 +1,43 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 
 [project]
-name = "Pakudex"
-version = "0.0.1"
+name = "STIM_Module"
+version = "0.0.1.dev1"
 authors = [
   { name="Jaxton Willman", email="jaxtonwillman@gmail.com" },
 ]
-description = "A small example package"
+description = "League of Legends STIM Module"
 readme = "README.md"
-license = { file="LICENSE" }
+license = "MIT"
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Development Status :: 2 - Dev",
+
+    "Intended Audience :: Pokemon Lovers",
+    "Topic :: Python Games :: Pokemon Games",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/jaxjaxw/Pakudex"
-"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+"Homepage" = "https://jaxjaxw.github.io/STIM_Module/index.html"
+"Issues" = "https://github.com/ben-covert2020/STIM_Module/issues"
+"Documentation" = "https://jaxjaxw.github.io/STIM_Module/documentation/index.html"
+"Source Code" = "https://github.com/ben-covert2020/STIM_Module"
+"Funding" = "https://www.patreon.com/jaxjaxw"
+
+[tool.setuptools.packages.find]
+where = ["src"]  # ["."] by default
+include = ["mypackage*"]  # ["*"] by default
+exclude = ["mypackage.tests*"]  # empty by default
+namespaces = false  # true by default
+
+[project.scripts]
+hello-world = "STIM_Module:hello_world"
+
+[project.gui-scripts]
+hello-world = "STIM_Module.test2:hello_world_gui"
