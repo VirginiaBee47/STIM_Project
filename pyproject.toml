@@ -34,7 +34,8 @@ exclude = ["STIM_Module.tests*"]  # empty by default
 namespaces = false  # true by default
 
 [project.scripts]
+applic = "STIM_Module.application:main"
 hello-world = "STIM_Module:hello_world"
 
 [project.gui-scripts]
-hello-world = "STIM_Module.test2:hello_world_gui"
+apprun = "STIM_Module.application:main"

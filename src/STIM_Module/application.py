@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
 import matplotlib
@@ -95,7 +96,7 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
             draw_graph(self, "d", sum_name.get(), recent_game_id[0])
 
 
-def main():
+def main(argv):
     root = tk.Tk()
     root.geometry("800x600")
     root.config(bg="#808c9f")
@@ -105,5 +106,5 @@ def main():
     root.mainloop()
 
 
-if (__name__ == "__main__"):
-    main()
+if __name__ == "__main__":
+    main(sys.argv)

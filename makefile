@@ -1,9 +1,9 @@
-
+# Makefile for the project
 run:
-	python test.py
+	python application.py
 
 setup: requirements.txt
-	pip install -r requirements.txt
+	python -m pip install -r requirements.txt
 
 clean:
 	rm -rf __pycache__

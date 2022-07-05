@@ -7,3 +7,16 @@ This is a simple example package. You can use
 to write your content.
 
 STIM is an app to use to help monitor and improve your LOL gameplay.
+
+
+
+USER GUIDE:
+
+install STIM_Module from testpypi
+
+run script, either:
+hello-world
+applic
+
+gui-script:
+apprun
