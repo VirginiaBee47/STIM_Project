@@ -14,6 +14,8 @@ def get_game_stats(raw_game_data):
 
 
 def get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid):
+    if puuid is None:
+        return None, None, None
     summoner_index = raw_game_data['metadata']['participants'].index(puuid)
 
     gold_earned = raw_game_data['info']['participants'][summoner_index]['goldEarned']
@@ -44,8 +46,11 @@ def get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, puuid):
 def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponent_puuid=None):
     user_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid)[2]
     if opponent_puuid is None:
-        opponent_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data,
-                                                         get_opponent_puuid(raw_game_data, puuid))[2]
+        if get_opponent_puuid(raw_game_data, puuid) is not None:
+            opponent_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data,
+                                                             get_opponent_puuid(raw_game_data, puuid))[2]
+        else:
+            return [-1 for i in range(len(user_gold_timeline))]
     else:
         opponent_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, opponent_puuid)[2]
 
