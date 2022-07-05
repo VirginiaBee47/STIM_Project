@@ -1,8 +1,4 @@
-
-
-def main():
-	print("This is a placeholder")
+from setuptools import setup
 
 if __name__ == "__main__":
-	main()
-
+	setup()
