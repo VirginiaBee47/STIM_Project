@@ -1,2 +1,7 @@
 nose
 sphinx
+matplotlib
+tk
+pandas
+numpy
+pysimplegui

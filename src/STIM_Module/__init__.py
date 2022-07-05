@@ -1,5 +1,4 @@
-def hello_world():
-    print("Hello World")
+import PySimpleGUI as sg
 
-def hello_world_gui():
-	print("Hello World")
+def hello_world():
+    sg.Window(title="Hello world", layout=[[]], margins=(100, 50)).read()
