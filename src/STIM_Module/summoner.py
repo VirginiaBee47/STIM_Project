@@ -6,7 +6,7 @@ from API_KEY import API_KEY
 
 
 def get_recent_game_ids(puuid, num_games):
-    response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + puuid +
+    response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + str(puuid) +
                       "/ids?start=0&count=" + str(num_games) + "&api_key=" + API_KEY)
 
     if response.status_code == 200:
