@@ -7,7 +7,9 @@ from pip import main
 from dummy_matplot import ret_graph
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from api_funcs import check_summoner_exists
+from api_funcs import *
+from summoner import *
+
 
 def matplot_init(color="grey"):
     COLOR = color
@@ -45,14 +47,14 @@ def load_game(master, game_idx):
     # TODO: Call API to get game data and call MATPLOT to graph it
     pass
 
-def draw_graph(parent, type="g", posy=0, posx=0):
+def draw_graph(parent, type="g", sum_name=None, game_id=None):
     matplot_init("white")
     df_obj = DataFrame()
     figure2 = plt.Figure(figsize=(4,4), dpi=50, facecolor='#707c8f')
     ax2 = figure2.add_subplot(111)
     ax2.patch.set_facecolor('black')
     line2 = FigureCanvasTkAgg(figure2, parent)
-    df_obj, xVar, yVar, line_color, col_num = ret_graph(type)
+    df_obj, xVar, yVar, line_color, col_num = ret_graph(type, sum_name, game_id)
     df_obj = df_obj[[xVar,yVar]].groupby(xVar).sum()
     df_obj.plot(kind='line', legend=True, ax=ax2, color=line_color ,marker='o', fontsize=10, ylabel=yVar)
     ax2.set_title("Time Vs. %s" % yVar)
@@ -84,9 +86,13 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
             # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
         else:
             ttk.Label(self, text="Summoner Name: %s\nWelcome Summoner Gathering Stats!" % sum_name.get(), style="Label_Style.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
-            draw_graph(self, "g")
-            draw_graph(self, "e")
-            draw_graph(self, "d")
+            puuid, _ = get_summoner(sum_name.get())
+            recent_game_id = get_recent_game_ids(puuid, 1)
+            print(recent_game_id[0])
+            make_game_csv(sum_name.get(), puuid, 1, recent_game_id)
+            draw_graph(self, "g", sum_name.get(), recent_game_id[0])
+            draw_graph(self, "e", sum_name.get(), recent_game_id[0])
+            draw_graph(self, "d", sum_name.get(), recent_game_id[0])
 
 
 def main():
