@@ -13,7 +13,8 @@
 *.vsix
 
 
-
+# Ignore Data
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
