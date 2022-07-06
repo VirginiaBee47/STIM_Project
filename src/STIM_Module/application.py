@@ -22,7 +22,6 @@ def matplot_init(color="grey"):
     matplotlib.rcParams['axes.facecolor'] = "black"
 
 
-
 def popUp(inst, master): 
     inst.pack_forget() # Destroy the parent, (May not be necessary)
     win = tk.Toplevel()
@@ -106,6 +105,7 @@ def main():
     s.configure('My.TFrame', background="#808c9f")
     main_window = MainWindow(root)
     root.mainloop()
+    # TODO: Clear temporary data files of users
 
 
 if __name__ == "__main__":
