@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 
 import requests as rq
 
@@ -20,6 +21,12 @@ def check_summoner_exists(summoner_name):
 
 
 def make_game_csv(summoner_name, summoner_puuid=None, num_games=5, recent_game_ids=None):
+    # TODO: Add directory existance checking, and add directory if it doesn't exists
+    if not os.path.exists("./data"):
+        #print("PATH DOES NOT EXIST")
+        os.makedirs("./data")
+
+
     if summoner_puuid is None:
         summoner_puuid = get_summoner("bEANS47")[0]
 
@@ -30,7 +37,7 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=5, recent_game_i
     
     for game_id in recent_game_ids:
         raw_game_data, raw_game_timeline_data = get_raw_game_data(game_id)
-        with open("data\\%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
+        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
             writer = csv.writer(outfile)
             writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
 

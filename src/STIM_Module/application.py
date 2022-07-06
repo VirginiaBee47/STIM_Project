@@ -1,15 +1,13 @@
 import tkinter as tk
 from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
-from pandas import DataFrame
-
 import matplotlib
+
+from pandas import DataFrame
+from dummy_matplot import ret_graph
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-from STIM_Module.dummy_matplot import ret_graph
-from STIM_Module.api_funcs import *
-from STIM_Module.summoner import *
-
+from api_funcs import *
+from summoner import *
 
 
 def matplot_init(color="grey"):
@@ -22,6 +20,7 @@ def matplot_init(color="grey"):
     matplotlib.rcParams['axes.facecolor'] = "black"
 
 
+
 def popUp(inst, master): 
     inst.pack_forget() # Destroy the parent, (May not be necessary)
     win = tk.Toplevel()
@@ -30,14 +29,15 @@ def popUp(inst, master):
     win.wm_title("Enter your Summoner Name")
     main_style = ttk.Style()
     main_style.configure("Label_Style.TLabel", background= "#808c9f", foreground="white")
-    l = ttk.Label(win, text="Enter Summoner Name:", style="Label_Style.TLabel")
+    l = ttk.Label(win, text="Enter Summoner Name:", style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold"))
     l.place(relx=.5, rely=.3, anchor=CENTER)
     sum_name = StringVar()
     e = ttk.Entry(win, width=10, textvariable=sum_name)
     e.place(relx=.5, rely=.5, anchor=CENTER)
     b = ttk.Button(win ,text="Enter", command=lambda win=win, sum_name=sum_name, master=master: custom_destroy(win, sum_name, master))
     b.place(relx=.5, rely=.7, anchor=CENTER)
-    # TODO: Add Enter key functionality
+    win.bind('<Return>', lambda event:custom_destroy(win, sum_name, master))
+    e.focus()
 
 def custom_destroy(win, sum_name, master):
     win.destroy()
@@ -79,17 +79,17 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
         self.pack()
         l_style = ttk.Style()
         l_style.configure("Label_Style.TLabel", background= "#808c9f", foreground="white")
-        if (check_summoner_exists(sum_name.get()) == False):
+        if (check_summoner_exists(sum_name.get()) == False or sum_name.get() == ""):
             print(sum_name.get())
             print("Why is no display")
-            ttk.Label(self, text="Invalid Summoner Try Again!", style="Label_Style.TLabel").grid(column=0, row=0)
+            ttk.Label(self, text="Invalid Summoner Try Again!", style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0)
             popUp(self, master)
             # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
         else:
-            ttk.Label(self, text="Summoner Name: %s\nWelcome Summoner Gathering Stats!" % sum_name.get(), style="Label_Style.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
-            puuid, _ = get_summoner(sum_name.get())
+            puuid, sum_level = get_summoner(sum_name.get())
             recent_game_id = get_recent_game_ids(puuid, 1)
             print(recent_game_id[0])
+            ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0, sticky=(W, N), padx= 5)
             make_game_csv(sum_name.get(), puuid, 1, recent_game_id)
             draw_graph(self, "g", sum_name.get(), recent_game_id[0])
             draw_graph(self, "e", sum_name.get(), recent_game_id[0])
@@ -98,7 +98,7 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
 
 def main():
     root = tk.Tk()
-    root.geometry("800x600")
+    root.geometry("1080x720")
     root.config(bg="#808c9f")
     s = ttk.Style()
     s.configure('My.TFrame', background="#808c9f")
@@ -106,5 +106,5 @@ def main():
     root.mainloop()
 
 
-if __name__ == "__main__":
+if (__name__ == "__main__"):
     main()
