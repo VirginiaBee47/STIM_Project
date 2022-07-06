@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 
-from summoner import get_opponent_puuid
+from STIM_Module.summoner import get_opponent_puuid
 
 
 def get_game_stats(raw_game_data):

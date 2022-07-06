@@ -1,8 +1,8 @@
-from summoner import *
-from game import *
-from user import *
-from api_funcs import *
-from data_processing import *
+from STIM_Module.summoner import *
+from STIM_Module.game import *
+from STIM_Module.user import *
+from STIM_Module.api_funcs import *
+from STIM_Module.data_processing import *
 
 
 def main():

@@ -3,10 +3,10 @@ import json
 
 import requests as rq
 
-from game import get_raw_game_data
-from summoner import *
-from data_processing import *
-from API_KEY import API_KEY
+from STIM_Module.game import get_raw_game_data
+from STIM_Module.summoner import *
+from STIM_Module.data_processing import *
+from STIM_Module.API_KEY import API_KEY
 
 
 def check_summoner_exists(summoner_name):
@@ -26,6 +26,8 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=5, recent_game_i
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
+    
+    
     for game_id in recent_game_ids:
         raw_game_data, raw_game_timeline_data = get_raw_game_data(game_id)
         with open("data\\%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:

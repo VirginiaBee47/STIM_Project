@@ -2,7 +2,7 @@ import json
 
 import requests as rq
 
-from API_KEY import API_KEY
+from STIM_Module.API_KEY import API_KEY
 
 
 def get_raw_game_data(game_id):

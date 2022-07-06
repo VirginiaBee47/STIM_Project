@@ -36,6 +36,7 @@ namespaces = false  # true by default
 [project.scripts]
 applic = "STIM_Module.application:main"
 hello-world = "STIM_Module:hello_world"
+hello-homeD = "STIM_Module:hello_homeD"
 
 [project.gui-scripts]
 apprun = "STIM_Module.application:main"
