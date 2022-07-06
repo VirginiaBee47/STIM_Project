@@ -49,7 +49,7 @@ STIM is an app to use to help monitor and improve your LOL gameplay.
 
 # Quickly rebuild application to test code and CLI changes
 Make sure to change the version number to the correct version you're on but it doesn't matter too much I think
-```py -m pip uninstall -y STIM_Module && py -m build && py -m pip install dist/STIM_Module-0.0.2-py3-none-any.whl```py
+```py -m pip uninstall -y STIM_Module && py -m build && py -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl```py
 
 
 
@@ -87,7 +87,7 @@ Make sure to change the version number to the correct version you're on but it d
 
 # Quickly rebuild application to test code and CLI changes
 Make sure to change the version number to the correct version you're on but it doesn't matter too much I think
-```python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.2-py3-none-any.whl```py
+```python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl```py
 
 
 

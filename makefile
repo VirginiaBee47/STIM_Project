@@ -1,4 +1,4 @@
-.PHONY : run setup clean rebuild uninstall upload upload_test install_test install build build_install
+.PHONY : run setup clean clear_dist rebuild uninstall upload upload_test install_test install build build_install
 
 # Makefile for the project
 run:
@@ -10,8 +10,11 @@ setup: requirements.txt
 clean:
 	rm -rf __pycache__
 
+clear_dist:
+	rm -rf dist
+
 rebuild:
-	python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.2-py3-none-any.whl
+	python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl
 
 uninstall:
 	python3 -m pip uninstall -y STIM_Module
@@ -32,4 +35,4 @@ build:
 	python3 -m build
 
 build_install:
-	python3 -m build && python3 -m pip install dist/STIM_Module-0.0.2-py3-none-any.whl
+	python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl
