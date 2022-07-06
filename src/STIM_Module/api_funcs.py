@@ -1,8 +1,6 @@
 import csv
 import json
 
-import requests as rq
-
 from game import get_raw_game_data
 from summoner import *
 from data_processing import *
