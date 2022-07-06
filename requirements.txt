@@ -8,3 +8,5 @@ pysimplegui
 build
 setuptools
 wheel
+requests
+datetime
