@@ -1,6 +1,7 @@
 import csv
 import json
 import asyncio
+import random
 
 from new_exceptions import *
 from summoner import *
@@ -72,3 +73,29 @@ async def get_raw_game_data(game_id):
         return raw_game_data, raw_game_timeline_data
     else:
         raise NullGameException
+
+
+def collect_data_for_rank(queue, tier, division):
+    valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
+    valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
+    valid_divisions = ["I", "II", "III", "IV"]
+
+    if queue not in valid_queues:
+        raise InvalidParamException("queue")
+    elif tier not in valid_tiers:
+        raise InvalidParamException("tier")
+    elif division not in valid_divisions:
+        raise InvalidParamException("division")
+
+    response = rq.get("https://na1.api.riotgames.com/lol/league/v4/entries/" + queue + "/" + tier + "/" + division +
+                      "?api_key=" + API_KEY)
+
+    if response.status_code == 200:
+        data = response.json()
+        puuids = [get_summoner(data[i]['summonerName'])[0] for i in range(7, 9)]
+        game_ids = [get_recent_game_ids(puuid, 3) for puuid in puuids]
+        game_data_entries = [asyncio.run(get_raw_game_data(game_id)) for game_id_list in game_ids
+                             for game_id in game_id_list]
+        print(game_data_entries)
+    else:
+        print("Error code" + str(response.status_code))

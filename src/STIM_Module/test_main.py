@@ -5,9 +5,7 @@ from data_processing import *
 
 
 def main():
-    puuid = get_summoner("bEANS47")[0]
-    recent_game_id = get_recent_game_ids(puuid)[0]
-    make_game_csv("bEANS47", puuid)
+    collect_data_for_rank("RANKED_SOLO_5x5", "GOLD", "II")
 
 
 if __name__ == '__main__':
