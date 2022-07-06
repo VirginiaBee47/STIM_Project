@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "STIM_Module"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Jaxton Willman", email="jaxtonwillman@gmail.com" },
 ]
@@ -34,9 +34,9 @@ exclude = ["STIM_Module.tests*"]  # empty by default
 namespaces = false  # true by default
 
 [project.scripts]
-applic = "STIM_Module.application:main"
+LOLstats = "STIM_Module.application:main"
 hello-world = "STIM_Module:hello_world"
 hello-homeD = "STIM_Module:hello_homeD"
 
 [project.gui-scripts]
-apprun = "STIM_Module.application:main"
+start = "STIM_Module.application:main"

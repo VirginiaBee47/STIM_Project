@@ -1,13 +1,15 @@
 import tkinter as tk
 from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
-import matplotlib
-
 from pandas import DataFrame
-from dummy_matplot import ret_graph
+
+import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from api_funcs import *
-from summoner import *
+
+from STIM_Module.dummy_matplot import ret_graph
+from STIM_Module.api_funcs import *
+from STIM_Module.summoner import *
+
 
 
 def matplot_init(color="grey"):
@@ -106,5 +108,5 @@ def main():
     root.mainloop()
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()
