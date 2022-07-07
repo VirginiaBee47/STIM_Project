@@ -1,8 +1,7 @@
-from re import S
-from struct import pack
 import tkinter as tk
 from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
 import matplotlib
+import os
 
 from pandas import DataFrame
 from dummy_matplot import ret_graph
@@ -24,7 +23,7 @@ def matplot_init(color="grey"):
 
 
 def popUp(inst, master): 
-    inst.pack_forget() # Destroy the parent, (May not be necessary)
+    inst.pack_forget()
     win = tk.Toplevel()
     win.config(bg="#808c9f")
     win.geometry("300x125")
@@ -64,6 +63,17 @@ def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num
     ax2.set_title("Time Vs. %s" % yVar)
     widget = line2.get_tk_widget()
     widget.grid(column=col_num, row=row_num)
+
+
+def delete_user_csvs(root):
+    print("This got called???")
+    dir_name = "./data"
+    if os.path.exists(dir_name):
+        files = os.listdir(dir_name)
+        for file in files:
+            if file.endswith(".csv"):
+                os.remove(os.path.join(dir_name, file))
+    root.destroy()
 
 class MainWindow(ttk.Frame):
     def __init__(self, master):
@@ -122,6 +132,7 @@ def main():
     s = ttk.Style()
     s.configure('My.TFrame', background="#808c9f")
     main_window = MainWindow(root)
+    root.protocol("WM_DELETE_WINDOW", lambda : delete_user_csvs(root))
     root.mainloop()
 
 

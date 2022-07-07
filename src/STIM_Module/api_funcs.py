@@ -21,7 +21,6 @@ def check_summoner_exists(summoner_name):
 
 
 def make_game_csv(summoner_name, summoner_puuid=None, num_games=5, recent_game_ids=None):
-    # TODO: Add directory existance checking, and add directory if it doesn't exists
     if not os.path.exists("./data"):
         #print("PATH DOES NOT EXIST")
         os.makedirs("./data")
