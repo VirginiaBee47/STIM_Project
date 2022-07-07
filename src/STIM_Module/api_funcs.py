@@ -173,7 +173,7 @@ def get_general_summoner_stats(raw_game_data, puuid):
 
     champion = raw_game_data['info']['participants'][summoner_index]['championName']
     position = raw_game_data['info']['participants'][summoner_index]['teamPosition']
-    victory = str(raw_game_data['info']['participants'][summoner_index]['win'])
+    victory = raw_game_data['info']['participants'][summoner_index]['win']
 
     return champion, position, victory
 
@@ -228,7 +228,7 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
 
             data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
-                         'game_time': game_datetime, 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
+                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
 
             json.dump(data_dict, outfile)
 
@@ -261,6 +261,8 @@ def filter_games(summoner_name, filter_attr, filter_val):
             filter_val = bool(filter_val)
         except Exception:
             raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'game_map' and filter_val not in game_maps:
+        raise InvalidParamException("filter_val", "Invalid game map")
 
     filtered_files = []
 
