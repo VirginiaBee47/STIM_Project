@@ -12,7 +12,7 @@ from API_KEY import API_KEY
 
 def respect_rate_limit(url):
     response = rq.get(url)
-    pattern = re.compile("(\d+):1,(\d+):120")
+    pattern = re.compile(r'(\d+):1,(\d+):120')
     for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
         one_sec_progress = int(match.group(1))
         two_min_progress = int(match.group(2))
@@ -168,6 +168,16 @@ def get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, puuid):
     return xp_timeline[-1], xp_timeline
 
 
+def get_general_summoner_stats(raw_game_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    champion = raw_game_data['info']['participants'][summoner_index]['championName']
+    position = raw_game_data['info']['participants'][summoner_index]['teamPosition']
+    victory = str(raw_game_data['info']['participants'][summoner_index]['win'])
+
+    return champion, position, victory
+
+
 def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponent_puuid=None):
     user_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid)[2]
     if opponent_puuid is None:
@@ -209,4 +219,64 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             for minute in range(len(gold_timeline)):
                 writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
 
+        with open("data/%s_%s.json" % (summoner_name, game_id), 'w') as outfile:
+            # gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            # xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+
+            data_dict = {'victory': victory, 'position': position, 'champion': champ}
+
+            json.dump(data_dict, outfile)
+
     return filenames
+
+
+def filter_games(summoner_name, filter_attr, filter_val):
+    filter_attributes = ["victory", "champion_played", "position_played"]
+    champions = ['MasterYi', 'Garen', 'Lucian']
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT', '']
+    game_modes = []
+
+    if filter_attr not in filter_attributes:
+        raise InvalidParamException("filter_attr")
+    elif filter_attr == 'champion_played' and filter_val not in champions:
+        raise InvalidParamException("filter_val", "Champion not implemented yet")
+    elif filter_attr == 'victory':
+        try:
+            filter_val = bool(filter_val)
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'position_played' and filter_val not in positions:
+        raise InvalidParamException("filter_val", "Position does not exist")
+    elif filter_attr == 'game_mode' and filter_val not in game_modes:
+        raise InvalidParamException("filter_val", "Invalid game mode")
+
+    filtered_files = []
+
+    for game_file in os.listdir('./data'):
+        if game_file[-5:] == ".json":
+            if game_file[:len(summoner_name)] == summoner_name:
+                with open("data/" + game_file, 'r') as file:
+                    game_data = json.load(file)
+                    if filter_attr == 'champion_played':
+                        if game_data['champion'] == filter_val:
+                            filtered_files.append(game_file)
+                    elif filter_attr == 'victory':
+                        if bool(game_data['victory']) == filter_val:
+                            filtered_files.append(game_file)
+                    elif filter_attr == 'position_played':
+                        if game_data['position'] == filter_val:
+                            filtered_files.append(game_file)
+                    elif filter_attr == 'game_mode':
+                        if game_data['game_mode'] == filter_val:
+                            filtered_files.append(game_file)
+
+    pattern = re.compile(r'\S+([A-Z]{2}1_\d{10})[.]json')
+
+    filtered_game_ids = []
+    for file_path_str in filtered_files:
+        for match in pattern.finditer(file_path_str):
+            filtered_game_ids.append(match.group(1))
+    return filtered_game_ids
