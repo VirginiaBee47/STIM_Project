@@ -225,8 +225,10 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
 
             champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+            game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
 
-            data_dict = {'victory': victory, 'position': position, 'champion': champ}
+            data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
+                         'game_time': game_datetime, 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
 
             json.dump(data_dict, outfile)
 
@@ -234,10 +236,12 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
 
 
 def filter_games(summoner_name, filter_attr, filter_val):
-    filter_attributes = ["victory", "champion_played", "position_played"]
+    filter_attributes = ["victory", "champion_played", "position_played", "game_mode", "ended_in_surrender"]
     champions = ['MasterYi', 'Garen', 'Lucian']
-    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT', '']
-    game_modes = []
+    # TODO: add in every champion id as it is stored in the json (not always intuitive)
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
+    game_modes = ['CLASSIC', 'ARAM']
+    game_maps = []
 
     if filter_attr not in filter_attributes:
         raise InvalidParamException("filter_attr")
@@ -252,6 +256,11 @@ def filter_games(summoner_name, filter_attr, filter_val):
         raise InvalidParamException("filter_val", "Position does not exist")
     elif filter_attr == 'game_mode' and filter_val not in game_modes:
         raise InvalidParamException("filter_val", "Invalid game mode")
+    elif filter_attr == 'ended_in_surrender':
+        try:
+            filter_val = bool(filter_val)
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
 
     filtered_files = []
 
@@ -271,6 +280,12 @@ def filter_games(summoner_name, filter_attr, filter_val):
                             filtered_files.append(game_file)
                     elif filter_attr == 'game_mode':
                         if game_data['game_mode'] == filter_val:
+                            filtered_files.append(game_file)
+                    elif filter_attr == 'ended_in_surrender':
+                        if bool(game_data['ended_in_surrender']) == filter_val:
+                            filtered_files.append(game_file)
+                    elif filter_attr == 'game_map':
+                        if game_data['game_map'] == filter_val:
                             filtered_files.append(game_file)
 
     pattern = re.compile(r'\S+([A-Z]{2}1_\d{10})[.]json')
