@@ -8,8 +8,6 @@ from dummy_matplot import ret_graph
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from api_funcs import *
-from summoner import *
-
 
 def matplot_init(color="grey"):
     COLOR = color

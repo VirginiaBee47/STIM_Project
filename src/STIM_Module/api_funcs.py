@@ -1,43 +1,36 @@
 import csv
 import json
 import asyncio
-import random
+import re
+import os
+import requests as rq
+from datetime import datetime as dt
 
 from new_exceptions import *
-from summoner import *
-from data_processing import *
 from API_KEY import API_KEY
 
 
+def respect_rate_limit(url):
+    response = rq.get(url)
+    pattern = re.compile("(\d+):1,(\d+):120")
+    for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
+        one_sec_progress = int(match.group(1))
+        two_min_progress = int(match.group(2))
+
+    if one_sec_progress >= 18 or two_min_progress >= 95:
+        raise RateLimitException(one_sec_progress, two_min_progress)
+    else:
+        return response
+
+
 def check_summoner_exists(summoner_name):
-    response = rq.get("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summoner_name +
-                      "?api_key=" + API_KEY)
+    response = respect_rate_limit("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summoner_name +
+                                  "?api_key=" + API_KEY)
 
     if response.status_code == 200:
         return True
     elif response.status_code == 404:
         return False
-
-
-def make_game_csv(summoner_name, summoner_puuid=None, num_games=5, recent_game_ids=None):
-    if summoner_puuid is None:
-        summoner_puuid = get_summoner("bEANS47")[0]
-
-    if recent_game_ids is None:
-        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
-
-    for game_id in recent_game_ids:
-        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
-        with open("data\\%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
-            writer = csv.writer(outfile)
-            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
-
-            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
-            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
-            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
-
-            for minute in range(len(gold_timeline)):
-                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
 
 
 async def get_data(game_id, timeline=False):
@@ -46,8 +39,8 @@ async def get_data(game_id, timeline=False):
     else:
         timeline_string = ""
 
-    response = rq.get("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
-                      timeline_string + "?api_key=" + API_KEY)
+    response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
+                                  timeline_string + "?api_key=" + API_KEY)
 
     if response.status_code == 200:
         data = json.loads(json.dumps(response.json()))
@@ -75,7 +68,7 @@ async def get_raw_game_data(game_id):
         raise NullGameException
 
 
-def collect_data_for_rank(queue, tier, division):
+def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
     valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
     valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
     valid_divisions = ["I", "II", "III", "IV"]
@@ -87,15 +80,133 @@ def collect_data_for_rank(queue, tier, division):
     elif division not in valid_divisions:
         raise InvalidParamException("division")
 
-    response = rq.get("https://na1.api.riotgames.com/lol/league/v4/entries/" + queue + "/" + tier + "/" + division +
-                      "?api_key=" + API_KEY)
+    response = respect_rate_limit(
+        "https://na1.api.riotgames.com/lol/league/v4/entries/" + queue + "/" + tier + "/" + division + "?api_key=" +
+        API_KEY)
 
     if response.status_code == 200:
-        data = response.json()
-        puuids = [get_summoner(data[i]['summonerName'])[0] for i in range(7, 9)]
-        game_ids = [get_recent_game_ids(puuid, 3) for puuid in puuids]
-        game_data_entries = [asyncio.run(get_raw_game_data(game_id)) for game_id_list in game_ids
-                             for game_id in game_id_list]
-        print(game_data_entries)
+        data = response.json()  # this is a list of summoners in the given queue, tier, and division
+        summoner_name = data[5]['summonerName']
+        return make_game_csv(summoner_name, num_games=3)
     else:
         print("Error code" + str(response.status_code))
+
+
+def get_recent_game_ids(puuid, num_games=1):
+    response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/" + str(puuid) +
+                                  "/ids?start=0&count=" + str(num_games) + "&api_key=" + API_KEY)
+
+    if response.status_code == 200:
+        return json.loads(json.dumps(response.json()))
+    else:
+        print("ERROR FOUND --- CODE: " + str(response.status_code))
+        return []
+
+
+def get_opponent_puuid(raw_game_data, user_puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(user_puuid)
+    summoner_position = raw_game_data['info']['participants'][summoner_index]['teamPosition']
+
+    if summoner_position == "":
+        return None
+    else:
+        (possible_opponent_indices := [i for i in range(0, 9)]).remove(summoner_index)
+        for i in possible_opponent_indices:
+            if raw_game_data['info']['participants'][i]['teamPosition'] == summoner_position:
+                return raw_game_data['metadata']['participants'][i]
+        return None
+
+
+def get_summoner(summoner_name):
+    response = respect_rate_limit("https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summoner_name +
+                                  "?api_key=" + API_KEY)
+
+    if response.status_code == 200:
+        response_data = json.loads(json.dumps(response.json()))
+        return response_data['puuid'], int(response_data['summonerLevel'])
+    else:
+        print("ERROR FOUND --- CODE: " + str(response.status_code))
+
+
+def get_game_stats(raw_game_data):
+    game_mode = raw_game_data['info']['gameMode']
+    game_map = raw_game_data['info']['mapId']
+    game_date_time = dt.fromtimestamp(round(float(raw_game_data['info']['gameStartTimestamp']) / 1000, 0))
+    ended_in_surrender = bool(raw_game_data['info']['participants'][0]['gameEndedInSurrender']) and bool(
+        raw_game_data['info']['participants'][5]['gameEndedInSurrender'])
+
+    return game_mode, game_map, game_date_time, ended_in_surrender
+
+
+def get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid):
+    if puuid is None:
+        return None, None, None
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    gold_earned = raw_game_data['info']['participants'][summoner_index]['goldEarned']
+    gold_spent = raw_game_data['info']['participants'][summoner_index]['goldSpent']
+
+    timeline_index = str(summoner_index + 1)
+
+    gold_timeline = []
+    for i in range(0, len(list(raw_game_timeline_data['info']['frames']))):
+        gold_timeline.append(
+            raw_game_timeline_data['info']['frames'][i]['participantFrames'][timeline_index]['totalGold'])
+
+    return gold_earned, gold_spent, gold_timeline
+
+
+def get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    timeline_index = str(summoner_index + 1)
+
+    xp_timeline = []
+    for i in range(0, len(list(raw_game_timeline_data['info']['frames']))):
+        xp_timeline.append(raw_game_timeline_data['info']['frames'][i]['participantFrames'][timeline_index]['xp'])
+
+    return xp_timeline[-1], xp_timeline
+
+
+def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponent_puuid=None):
+    user_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid)[2]
+    if opponent_puuid is None:
+        if get_opponent_puuid(raw_game_data, puuid) is not None:
+            opponent_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data,
+                                                             get_opponent_puuid(raw_game_data, puuid))[2]
+        else:
+            return [-1 for i in range(len(user_gold_timeline))]
+    else:
+        opponent_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, opponent_puuid)[2]
+
+    return [user_gold_timeline[i] - opponent_gold_timeline[i] for i in range(len(user_gold_timeline))]
+
+
+def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    if not os.path.exists("./data"):
+        # print("PATH DOES NOT EXIST")
+        os.makedirs("./data")
+
+    if summoner_puuid is None:
+        summoner_puuid = get_summoner(summoner_name)[0]
+
+    if recent_game_ids is None:
+        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
+
+    filenames = []
+
+    for game_id in recent_game_ids:
+        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
+        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
+            filenames.append("data/%s_%s.csv" % (summoner_name, game_id))
+            writer = csv.writer(outfile)
+            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
+
+            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            for minute in range(len(gold_timeline)):
+                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
+
+    return filenames
