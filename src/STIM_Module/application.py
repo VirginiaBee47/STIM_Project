@@ -1,12 +1,12 @@
 import tkinter as tk
-from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
+from tkinter import CENTER, E, N, S, TOP, W, Label, StringVar, ttk
 import matplotlib
-import os
-
-from pandas import DataFrame
-from dummy_matplot import ret_graph
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import os
+from pandas import DataFrame
+
+from dummy_matplot import ret_graph, ret_pro_graph
 from api_funcs import *
 from summoner import *
 
@@ -42,22 +42,32 @@ def popUp(inst, master):
 
 def custom_destroy(win, sum_name, master):
     win.destroy()
-    SecondaryWindow(master, sum_name)
+    pro_games = collect_data_for_rank()
+    SecondaryWindow(master, sum_name, pro_games)
 
 
-def draw_all_graphs(parent, sum_name, game_id, row_num):
-    draw_graph(parent, "g", sum_name.get(), game_id, 1, row_num)
-    draw_graph(parent, "e", sum_name.get(), game_id, 2, row_num)
-    draw_graph(parent, "d", sum_name.get(), game_id, 3, row_num)
+def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=None):
+    if filename is not None:
+        draw_graph(parent, "g", col_num=1, row_num=row_num, filename=filename)
+        draw_graph(parent, "e", col_num=2, row_num=row_num, filename=filename)
+        draw_graph(parent, "d", col_num=3, row_num=row_num, filename=filename)
+    else:
+        draw_graph(parent, "g", sum_name.get(), game_id, 1, row_num)
+        draw_graph(parent, "e", sum_name.get(), game_id, 2, row_num)
+        draw_graph(parent, "d", sum_name.get(), game_id, 3, row_num)
 
-def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num=0):
+        
+def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num=0, filename=None):
     matplot_init("white")
     df_obj = DataFrame()
     figure2 = plt.Figure(figsize=(4,4), dpi=50, facecolor='#707c8f')
     ax2 = figure2.add_subplot(111)
     ax2.patch.set_facecolor('black')
     line2 = FigureCanvasTkAgg(figure2, parent)
-    df_obj, xVar, yVar, line_color = ret_graph(type, sum_name, game_id)
+    if filename is None:
+        df_obj, xVar, yVar, line_color = ret_graph(type, sum_name, game_id)
+    else:
+        df_obj, xVar, yVar, line_color = ret_pro_graph(type, filename)
     df_obj = df_obj[[xVar,yVar]].groupby(xVar).sum()
     df_obj.plot(kind='line', legend=True, ax=ax2, color=line_color ,marker='o', fontsize=10, ylabel=yVar)
     ax2.set_title("Time Vs. %s" % yVar)
@@ -87,7 +97,7 @@ class MainWindow(ttk.Frame):
        
 
 class SecondaryWindow(ttk.Frame): # Summoner Name Verification
-    def __init__(self, master, sum_name):
+    def __init__(self, master, sum_name, pro_games):
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         l_style = ttk.Style()
@@ -101,15 +111,12 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
             puuid, sum_level = get_summoner(sum_name.get())
             recent_game_ids = get_recent_game_ids(puuid, num_games)
             ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0, sticky=(W, N), padx= 5)
+            # User Game Display
             make_game_csv(sum_name.get(), puuid, num_games, recent_game_ids)
-            ttk.Label(self, text="%s's Stats For \nGame ID: %d" %(sum_name.get(), 1), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=1)
-            draw_all_graphs(self, sum_name, recent_game_ids[0], row_num=1)
-            ttk.Button(self, text="View Next User Game", command=lambda : GameDisplayWindow(master, self, sum_name, 1, 0, recent_game_ids)).grid(column=0, row=1, sticky="s")
-            # TODO: Add pro game display with user name
-            # TODO: Add Label displaying game advice
+            GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_games)
 
 class GameDisplayWindow(ttk.Frame):
-    def __init__(self, master, parent,sum_name, user_game_num, pro_game_num, game_ids):
+    def __init__(self, master, parent,sum_name, user_game_num, pro_game_num, game_ids, pro_games):
         parent.pack_forget()
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
@@ -118,11 +125,17 @@ class GameDisplayWindow(ttk.Frame):
         _, sum_level = get_summoner(sum_name.get())
         recent_game_id = game_ids[user_game_num]
         ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0, sticky=(W, N), padx= 5)
-        ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=1)
+        ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=1, sticky=W)
         draw_all_graphs(self, sum_name, game_ids[user_game_num], row_num=1)
-        ttk.Button(self, text="View Next Game", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), 0, game_ids)).grid(column=0, row=2)
-
-
+        ttk.Button(self, text="View Next User Game", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W))
+        # Drawing Pro Games
+        ttk.Label(self, text="Pro's Stats For \nGame %d" %((pro_game_num % 3) + 1), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=2, sticky=W)
+        draw_all_graphs(self, row_num=2, filename=pro_games[pro_game_num])
+        ttk.Button(self, text="View Next Pro Game", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W))
+        # Place Holder Advice Label
+        advice_string = "Do better forehead."
+        ttk.Label(self, text="Advice For This Comparison:", style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=3, sticky=(W, N))
+        ttk.Label(self, text="Tip 1: %s" % advice_string, style="Label_Style.TLabel", font=("Friz Quadrata", 10)).grid(column=0, row=4, sticky=(W, N))
 
 
 def main():
