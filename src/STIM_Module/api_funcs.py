@@ -1,8 +1,6 @@
-import csv
-import json
-import asyncio
-import re
-import os
+import csv, json, asyncio, re, os
+
+
 import requests as rq
 from datetime import datetime as dt
 
