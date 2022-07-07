@@ -1,3 +1,5 @@
+from re import S
+from struct import pack
 import tkinter as tk
 from tkinter import CENTER, E, N, TOP, W, Label, StringVar, ttk
 import matplotlib
@@ -44,23 +46,24 @@ def custom_destroy(win, sum_name, master):
     SecondaryWindow(master, sum_name)
 
 
-def load_game(master, game_idx):
-    # TODO: Call API to get game data and call MATPLOT to graph it
-    pass
+def draw_all_graphs(parent, sum_name, game_id, row_num):
+    draw_graph(parent, "g", sum_name.get(), game_id, 1, row_num)
+    draw_graph(parent, "e", sum_name.get(), game_id, 2, row_num)
+    draw_graph(parent, "d", sum_name.get(), game_id, 3, row_num)
 
-def draw_graph(parent, type="g", sum_name=None, game_id=None):
+def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num=0):
     matplot_init("white")
     df_obj = DataFrame()
     figure2 = plt.Figure(figsize=(4,4), dpi=50, facecolor='#707c8f')
     ax2 = figure2.add_subplot(111)
     ax2.patch.set_facecolor('black')
     line2 = FigureCanvasTkAgg(figure2, parent)
-    df_obj, xVar, yVar, line_color, col_num = ret_graph(type, sum_name, game_id)
+    df_obj, xVar, yVar, line_color = ret_graph(type, sum_name, game_id)
     df_obj = df_obj[[xVar,yVar]].groupby(xVar).sum()
     df_obj.plot(kind='line', legend=True, ax=ax2, color=line_color ,marker='o', fontsize=10, ylabel=yVar)
     ax2.set_title("Time Vs. %s" % yVar)
     widget = line2.get_tk_widget()
-    widget.grid(column=col_num, row=0)
+    widget.grid(column=col_num, row=row_num)
 
 class MainWindow(ttk.Frame):
     def __init__(self, master):
@@ -80,20 +83,36 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
         l_style = ttk.Style()
         l_style.configure("Label_Style.TLabel", background= "#808c9f", foreground="white")
         if (check_summoner_exists(sum_name.get()) == False or sum_name.get() == ""):
-            print(sum_name.get())
-            print("Why is no display")
             ttk.Label(self, text="Invalid Summoner Try Again!", style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0)
             popUp(self, master)
             # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
         else:
+            num_games = 3
             puuid, sum_level = get_summoner(sum_name.get())
-            recent_game_id = get_recent_game_ids(puuid, 1)
-            print(recent_game_id[0])
+            recent_game_ids = get_recent_game_ids(puuid, num_games)
             ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0, sticky=(W, N), padx= 5)
-            make_game_csv(sum_name.get(), puuid, 1, recent_game_id)
-            draw_graph(self, "g", sum_name.get(), recent_game_id[0])
-            draw_graph(self, "e", sum_name.get(), recent_game_id[0])
-            draw_graph(self, "d", sum_name.get(), recent_game_id[0])
+            make_game_csv(sum_name.get(), puuid, num_games, recent_game_ids)
+            ttk.Label(self, text="%s's Stats For \nGame ID: %d" %(sum_name.get(), 1), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=1)
+            draw_all_graphs(self, sum_name, recent_game_ids[0], row_num=1)
+            ttk.Button(self, text="View Next User Game", command=lambda : GameDisplayWindow(master, self, sum_name, 1, 0, recent_game_ids)).grid(column=0, row=1, sticky="s")
+            # TODO: Add pro game display with user name
+            # TODO: Add Label displaying game advice
+
+class GameDisplayWindow(ttk.Frame):
+    def __init__(self, master, parent,sum_name, user_game_num, pro_game_num, game_ids):
+        parent.pack_forget()
+        ttk.Frame.__init__(self, master, style="My.TFrame")
+        self.pack()
+        l_style = ttk.Style()
+        l_style.configure("Label_Style.TLabel", background= "#808c9f", foreground="white")
+        _, sum_level = get_summoner(sum_name.get())
+        recent_game_id = game_ids[user_game_num]
+        ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=0, sticky=(W, N), padx= 5)
+        ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Label_Style.TLabel", font=("Friz Quadrata", 16, "bold")).grid(column=0, row=1)
+        draw_all_graphs(self, sum_name, game_ids[user_game_num], row_num=1)
+        ttk.Button(self, text="View Next Game", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), 0, game_ids)).grid(column=0, row=2)
+
+
 
 
 def main():
