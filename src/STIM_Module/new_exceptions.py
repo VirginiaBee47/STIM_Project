@@ -4,11 +4,12 @@ class NullGameException(Exception):
 
 
 class InvalidParamException(Exception):
-    def __init__(self, param_name):
+    def __init__(self, param_name, message=''):
         self.param_name = param_name
+        self.message = message
 
     def __str__(self):
-        return f'Invalid parameter: {self.param_name}'
+        return f'Invalid parameter: {self.param_name}\n{self.message}'
 
 
 class RateLimitException(Exception):

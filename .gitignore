@@ -170,3 +170,4 @@ cython_debug/
 #.idea/
 src/STIM_Module/user_settings/user_bEANS47.json
 src/STIM_Module/test_main.py
+*.json
