@@ -8,7 +8,6 @@ from pandas import DataFrame
 
 from dummy_matplot import ret_graph, ret_pro_graph
 from api_funcs import *
-from summoner import *
 
 
 def matplot_init(color="grey"):
