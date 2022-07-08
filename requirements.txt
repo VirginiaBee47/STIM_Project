@@ -1,12 +1,7 @@
-nose
 sphinx
 matplotlib
 tk
 pandas
 numpy
-pysimplegui
-build
-setuptools
-wheel
 requests
 datetime

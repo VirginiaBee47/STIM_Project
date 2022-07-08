@@ -6,8 +6,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 from pandas import DataFrame
 
-from dummy_matplot import ret_graph, ret_pro_graph
-from api_funcs import *
+from STIM_Module.dummy_matplot import ret_graph, ret_pro_graph
+from STIM_Module.api_funcs import *
 
 
 def matplot_init(color="grey"):
@@ -75,7 +75,7 @@ def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num
 
 
 def delete_user_csvs(root):
-    print("This got called???")
+    #print("This got called???")
     dir_name = "./data"
     if os.path.exists(dir_name):
         files = os.listdir(dir_name)
