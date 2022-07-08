@@ -7,7 +7,8 @@ from pip import main
 from dummy_matplot import ret_graph
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from api_funcs import *
+from STIM_Module.api_funcs import *
+
 
 def matplot_init(color="grey"):
     COLOR = color

@@ -3,9 +3,8 @@ import csv, json, asyncio, re, os
 
 import requests as rq
 from datetime import datetime as dt
-
-from new_exceptions import *
-from API_KEY import API_KEY
+from STIM_Module.new_exceptions import *
+from STIM_Module.API_KEY import API_KEY
 
 
 def respect_rate_limit(url):
