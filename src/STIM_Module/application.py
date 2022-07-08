@@ -81,7 +81,7 @@ def delete_user_csvs(root):
     if os.path.exists(dir_name):
         files = os.listdir(dir_name)
         for file in files:
-            if file.endswith(".csv"):
+            if file.endswith(".csv") or file.endswith(".json"):
                 os.remove(os.path.join(dir_name, file))
     root.destroy()
 
