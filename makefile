@@ -14,7 +14,7 @@ clear_dist:
 	rm -rf dist
 
 rebuild:
-	python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl
+	python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.4-py3-none-any.whl
 
 uninstall:
 	python3 -m pip uninstall -y STIM_Module

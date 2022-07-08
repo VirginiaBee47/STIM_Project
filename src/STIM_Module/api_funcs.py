@@ -4,10 +4,10 @@ import os
 
 import requests as rq
 
-from STIM_Module.game import get_raw_game_data
-from STIM_Module.summoner import *
-from STIM_Module.data_processing import *
-from STIM_Module.API_KEY import API_KEY
+from game import get_raw_game_data
+from summoner import *
+from data_processing import *
+from API_KEY import API_KEY
 
 
 def check_summoner_exists(summoner_name):

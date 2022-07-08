@@ -6,9 +6,9 @@ import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from STIM_Module.dummy_matplot import ret_graph
-from STIM_Module.api_funcs import *
-from STIM_Module.summoner import *
+from dummy_matplot import ret_graph
+from api_funcs import *
+from summoner import *
 
 
 
