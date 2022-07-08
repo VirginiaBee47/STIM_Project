@@ -5,3 +5,8 @@ tk
 pandas
 numpy
 pysimplegui
+build
+setuptools
+wheel
+requests
+datetime

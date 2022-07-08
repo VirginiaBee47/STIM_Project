@@ -13,8 +13,9 @@
 *.vsix
 
 
-# Ignore Data
-*.csv
+# Ignore program specific data and settings
+tmp_data/*
+user_settings/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
