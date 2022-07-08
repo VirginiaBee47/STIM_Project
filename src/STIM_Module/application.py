@@ -75,7 +75,6 @@ def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num
 
 
 def delete_user_csvs(root):
-    print("This got called???")
     dir_name = "./data"
     if os.path.exists(dir_name):
         files = os.listdir(dir_name)
