@@ -1,6 +1,6 @@
-# League of Legends Stats Tracker
+# League of Legends Statistics Tracker and Improvement Manager
 
-STIM is an app to use to help monitor and improve your LOL gameplay.
+STIM is an app to use to help monitor and improve your LOL gameplay. Get it today!
 
 
 
@@ -88,3 +88,6 @@ Make sure to change the version number to the correct version you're on but it d
 
 
 ## Also check the makefile for these common scripts
+
+
+export PATH="$HOME/.local/bin:$PATH"

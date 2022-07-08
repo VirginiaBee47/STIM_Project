@@ -2,7 +2,7 @@ import json
 
 import requests as rq
 
-from STIM_Module.API_KEY import API_KEY
+from API_KEY import API_KEY
 
 
 def get_recent_game_ids(puuid, num_games):
