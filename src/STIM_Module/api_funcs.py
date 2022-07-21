@@ -259,56 +259,22 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     return "data/%s.db" % summoner_name
 
 
-def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
-    # NOTE: this function is going to be deprecated shortly because of the efficiencies afforded by writing to a sqlite3
-    # database. Program may break upon use in the future
-
-    if not os.path.exists("./data"):
-        # print("PATH DOES NOT EXIST")
-        os.makedirs("./data")
-
-    if summoner_puuid is None:
-        summoner_puuid = get_summoner(summoner_name)[0]
-
-    if recent_game_ids is None:
-        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
-
-    filenames = []
-
-    for game_id in recent_game_ids:
-        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
-        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
-            filenames.append("data/%s_%s.csv" % (summoner_name, game_id))
-            writer = csv.writer(outfile)
-            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
-
-            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
-            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
-            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
-
-            for minute in range(len(gold_timeline)):
-                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
-
-        with open("data/%s_%s.json" % (summoner_name, game_id), 'w') as outfile:
-            # gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
-            # xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
-            # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
-
-            champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
-            game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
-
-            data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
-                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
-
-            json.dump(data_dict, outfile)
-
-    return filenames
-
-
 def filter_games_sql(summoner_name, filter_attr, filter_val):
     filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
-    champions = ['MasterYi', 'Garen', 'Lucian']
-    # TODO: add in every champion id as it is stored in the json (not always intuitive)
+    champions = ['Aatrox', 'Ahri', 'Akali', 'Alistar', 'Amumu', 'Anivia', 'Annie', 'Ashe', 'AurelionSol', 'Azir',
+                 'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia', 'Chogath', 'Corki',
+                 'Darius', 'Diana', 'Draven', 'DrMundo', 'Ekko', 'Elise', 'Evelynn', 'Ezreal', 'FiddleSticks',
+                 'Fiora', 'Fizz', 'Galio', 'Gangplank', 'Garen', 'Gnar', 'Gragas', 'Graves', 'Hecarim', 'Heimerdinger',
+                 'Illaoi', 'Irelia', 'Ivern', 'Janna', 'JarvanIV', 'Jax', 'Jayce', 'Jhin', 'Jinx', 'Kalista', 'Karma',
+                 'Karthus', 'Kassadin', 'Katarina', 'Kayle', 'Kennen', 'Khazix', 'Kindred', 'Kled', 'KogMaw', 'Leblanc',
+                 'LeeSin', 'Leona', 'Lissandra', 'Lucian', 'Lulu', 'Lux', 'Malphite', 'Malzahar', 'Maokai', 'MasterYi',
+                 'MissFortune', 'MonkeyKing', 'Mordekaiser', 'Morgana', 'Nami', 'Nasus', 'Nautilus', 'Nidalee',
+                 'Nocturne', 'Nunu', 'Olaf', 'Orianna', 'Pantheon', 'Poppy', 'Quinn', 'Rammus', 'RekSai', 'Renekton',
+                 'Rengar', 'Riven', 'Rumble', 'Ryze', 'Sejuani', 'Shaco', 'Shen', 'Shyvana', 'Singed', 'Sion', 'Sivir',
+                 'Skarner', 'Sona', 'Soraka', 'Swain', 'Syndra', 'TahmKench', 'Taliyah', 'Talon', 'Taric', 'Teemo',
+                 'Thresh', 'Tristana', 'Trundle', 'Tryndamere', 'TwistedFate', 'Twitch', 'Udyr', 'Urgot', 'Varus',
+                 'Vayne', 'Veigar', 'Velkoz', 'Vi', 'Viktor', 'Vladimir', 'Volibear', 'Warwick', 'Xerath', 'XinZhao',
+                 'Yasuo', 'Yorick', 'Zac', 'Zed', 'Ziggs', 'Zilean', 'Zyra']
     positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
     game_modes = ['CLASSIC', 'ARAM']
     game_maps = []
@@ -350,6 +316,9 @@ def filter_games_sql(summoner_name, filter_attr, filter_val):
     cursor.execute("SELECT ID FROM GAMEDATA WHERE ?=?", params)
     entries = cursor.fetchall()
     return entries
+
+
+# The below functions are old/unused and may break things
 
 
 def filter_games_json(summoner_name, filter_attr, filter_val):
@@ -415,3 +384,49 @@ def filter_games_json(summoner_name, filter_attr, filter_val):
         for match in pattern.finditer(file_path_str):
             filtered_game_ids.append(match.group(1))
     return filtered_game_ids
+
+
+def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    # NOTE: this function is going to be deprecated shortly because of the efficiencies afforded by writing to a sqlite3
+    # database. Program may break upon use in the future
+
+    if not os.path.exists("./data"):
+        # print("PATH DOES NOT EXIST")
+        os.makedirs("./data")
+
+    if summoner_puuid is None:
+        summoner_puuid = get_summoner(summoner_name)[0]
+
+    if recent_game_ids is None:
+        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
+
+    filenames = []
+
+    for game_id in recent_game_ids:
+        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
+        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
+            filenames.append("data/%s_%s.csv" % (summoner_name, game_id))
+            writer = csv.writer(outfile)
+            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
+
+            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            for minute in range(len(gold_timeline)):
+                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
+
+        with open("data/%s_%s.json" % (summoner_name, game_id), 'w') as outfile:
+            # gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            # xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+            game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
+
+            data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
+                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
+
+            json.dump(data_dict, outfile)
+
+    return filenames
