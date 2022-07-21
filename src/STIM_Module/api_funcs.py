@@ -1,10 +1,15 @@
-import csv, json, asyncio, re, os
-
+import asyncio
+import csv
+import json
+import os
+import re
+import sqlite3
+from datetime import datetime as dt
 
 import requests as rq
-from datetime import datetime as dt
-from STIM_Module.new_exceptions import *
+
 from STIM_Module.API_KEY import API_KEY
+from STIM_Module.new_exceptions import *
 
 
 def respect_rate_limit(url):
@@ -189,7 +194,75 @@ def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponen
     return [user_gold_timeline[i] - opponent_gold_timeline[i] for i in range(len(user_gold_timeline))]
 
 
+def create_sqlite_db(summoner_name):
+    if not os.path.exists("./data"):
+        os.makedirs("./data")
+
+    connection = sqlite3.connect("data/" + summoner_name + '.db')
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute('''CREATE TABLE GAMEDATA 
+        (ID INT PRIMARY KEY,
+        REGION CHAR(5) NOT NULL,
+        VICTORY INTEGER NOT NULL,
+        CHAMPION_PLAYED CHAR(25) NOT NULL,
+        POSITION_PLAYED CHAR(7),
+        GAMEMODE CHAR(7),
+        ENDED_IN_SURRENDER INTEGER,
+        GOLDTL CHAR(300) NOT NULL,
+        XPTL CHAR(300) NOT NULL,
+        GLDDIFTL CHAR(300) NOT NULL);''')
+        connection.commit()
+    except sqlite3.OperationalError as e:
+        print(e, ": Assuming that .db file exists without error. Continuing", sep="")
+
+    connection.close()
+
+
+def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    connection = sqlite3.connect("data/" + summoner_name + '.db')
+    cursor = connection.cursor()
+
+    if summoner_puuid is None:
+        summoner_puuid = get_summoner(summoner_name)[0]
+
+    if recent_game_ids is None:
+        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
+
+    for game_id in recent_game_ids:
+        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
+
+        pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
+        match = re.match(pattern, str(game_id))
+
+        db_id = int(match.group(2))
+        region_id = match.group(1)
+        champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+        gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
+        gold_timeline = str(get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2])
+        xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
+        gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
+
+        params = [db_id, region_id, victory, champ, position, gamemode, surrender, gold_timeline, xp_timeline,
+                  gold_diff_timeline]
+
+        try:
+            cursor.execute(f'''INSERT INTO GAMEDATA 
+                               (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
+                               VALUES
+                               (?,?,?,?,?,?,?,?,?,?)''', params)
+        except sqlite3.IntegrityError as e:
+            print(e, ": Skipping entry and continuing", sep="")
+        connection.commit()
+    connection.close()
+    return "data/%s.db" % summoner_name
+
+
 def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    # NOTE: this function is going to be deprecated shortly because of the efficiencies afforded by writing to a sqlite3
+    # database. Program may break upon use in the future
+
     if not os.path.exists("./data"):
         # print("PATH DOES NOT EXIST")
         os.makedirs("./data")
@@ -232,10 +305,58 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
     return filenames
 
 
-def filter_games(summoner_name, filter_attr, filter_val):
-    filter_attributes = ["victory", "champion_played", "position_played", "game_mode", "ended_in_surrender"]
+def filter_games_sql(summoner_name, filter_attr, filter_val):
+    filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
     champions = ['MasterYi', 'Garen', 'Lucian']
     # TODO: add in every champion id as it is stored in the json (not always intuitive)
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
+    game_modes = ['CLASSIC', 'ARAM']
+    game_maps = []
+
+    if filter_attr not in filter_attributes:
+        raise InvalidParamException("filter_attr")
+    elif filter_attr == 'CHAMPION_PLAYED' and filter_val not in champions:
+        raise InvalidParamException("filter_val", "Champion not implemented yet")
+    elif filter_attr == 'VICTORY':
+        try:
+            if bool(filter_val):
+                filter_val = 1
+            else:
+                filter_val = 0
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'POSITION_PLAYED' and filter_val not in positions:
+        raise InvalidParamException("filter_val", "Position does not exist")
+    elif filter_attr == 'GAMEMODE' and filter_val not in game_modes:
+        raise InvalidParamException("filter_val", "Invalid game mode")
+    elif filter_attr == 'ENDED_IN_SURRENDER':
+        try:
+            if bool(filter_val):
+                filter_val = 1
+            else:
+                filter_val = 0
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
+        raise InvalidParamException("filter_val", "Invalid game map")
+
+    filtered_files = []
+
+    connection = sqlite3.connect("data/%s.db" % summoner_name)
+    cursor = connection.cursor()
+
+    params = (filter_attr, filter_val)
+
+    cursor.execute("SELECT ID FROM GAMEDATA WHERE ?=?", params)
+    entries = cursor.fetchall()
+    return entries
+
+
+def filter_games_json(summoner_name, filter_attr, filter_val):
+    # NOTE: filter_games_json has been deprecated due to the performance enhancement provided by sqlite3 therefore it might
+    # break upon use in the future
+    filter_attributes = ["victory", "champion_played", "position_played", "game_mode", "ended_in_surrender"]
+    champions = ['MasterYi', 'Garen', 'Lucian']
     positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
     game_modes = ['CLASSIC', 'ARAM']
     game_maps = []
