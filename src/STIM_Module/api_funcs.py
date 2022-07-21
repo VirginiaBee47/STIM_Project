@@ -12,6 +12,9 @@ from STIM_Module.API_KEY import API_KEY
 from STIM_Module.new_exceptions import *
 
 
+QUEUE = []
+
+
 def respect_rate_limit(url):
     response = rq.get(url)
     pattern = re.compile(r'(\d+):1,(\d+):120')
@@ -41,15 +44,21 @@ async def get_data(game_id, timeline=False):
     else:
         timeline_string = ""
 
-    response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
+    try:
+        response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
                                   timeline_string + "?api_key=" + API_KEY)
 
-    if response.status_code == 200:
-        data = json.loads(json.dumps(response.json()))
-    else:
-        raise NullGameException
+        if response.status_code == 200:
+            data = json.loads(json.dumps(response.json()))
+        else:
+            raise NullGameException
 
-    return data, timeline
+        return data, timeline
+    except RateLimitException:
+        QUEUE.append((respect_rate_limit, "https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
+                      timeline_string + "?api_key=" + API_KEY))
+
+        return "Added to queue due to rate limit exception", -1
 
 
 async def get_raw_game_data(game_id):
@@ -66,8 +75,8 @@ async def get_raw_game_data(game_id):
 
     if raw_game_data is not None and raw_game_timeline_data is not None:
         return raw_game_data, raw_game_timeline_data
-    else:
-        raise NullGameException
+    elif raw_game_timeline_data == -1:
+        asyncio.sleep(10)
 
 
 def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
@@ -231,13 +240,20 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
     for game_id in recent_game_ids:
-        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
-
         pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
         match = re.match(pattern, str(game_id))
 
         db_id = int(match.group(2))
         region_id = match.group(1)
+
+        try:
+            cursor.execute('''SELECT * FROM GAMEDATA WHERE ID=?''', (db_id,))
+            print("Game ID: %f\talready exists. Skipping (no API call made)")
+            continue
+        except sqlite3.Error as e:
+            raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
+            print("made api call")
+
         champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
         gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
         gold_timeline = str(get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2])
