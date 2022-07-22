@@ -1,38 +1,83 @@
-.PHONY : run setup clean clear_dist rebuild uninstall upload upload_test install_test install build build_install
+# Signifies our desired python version
+# Makefile macros (or variables) are defined a little bit differently than traditional bash, keep in mind that in the Makefile there's top-level Makefile-only syntax, and everything else is bash script syntax.
+PYTHON = python3
+PACKAGE = STIM_Module
+VERSION = 0.1.0
 
-# Makefile for the project
+# Defining an array variable
+FILES = input output
+
+# Defines the default target that `make` will to try to make, or in the case of a phony target, execute the specified commands
+# This target is executed whenever we just type `make`
+.DEFAULT_GOAL = help
+
+.PHONY : help hello run test setup clean clean_dist rebuild uninstall upload upload_test install_test install build build_install rebuild_ver
+
+
+# REGULAR COMMANDS
+
+hello:
+	@echo "Hello, world!"
+
+help:
+	@echo "---------------HELP-----------------"
+	@grep -F ":" Makefile | awk '!/awk/' | awk '!/Description/' | sed -e 's/://'
+	@echo "------------------------------------"
+
 run:
 	LOLstats
 
 setup: requirements.txt
-	python3 -m pip install -r requirements.txt
+	${PYTHON} -m pip install -r requirements.txt
 
 clean:
 	rm -rf __pycache__
+	rm -rf data/*
 
-clear_dist:
+clean_dist:
 	rm -rf dist
 
-rebuild:
-	python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl
-
 uninstall:
-	python3 -m pip uninstall -y STIM_Module
-
-install_test:
-	python3 -m pip install -r requirements.txt
+	${PYTHON} -m pip uninstall -y ${PACKAGE}
 
 install:
-	python3 -m pip install STIM_Module
+	${PYTHON} -m pip install ${PACKAGE}
+
+install_test:
+	${PYTHON} -m pip install --index-url https://test.pypi.org/simple/ --no-deps ${PACKAGE}
+
+
+# DEV COMMANDS
 
 upload:
-	twine upload dist/*
+	${PYTHON} -m twine upload dist/*
 
 upload_test:
-	python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps STIM_Module
+	${PYTHON} -m twine upload --repository testpypi dist/*
 
 build:
-	python3 -m build
+	${PYTHON} -m build
 
-build_install:
-	python3 -m build && python3 -m pip install dist/STIM_Module-0.0.3-py3-none-any.whl
+rebuild:
+	${PYTHON} -m pip uninstall -y ${PACKAGE} && ${PYTHON} -m build && ${PYTHON} -m pip install dist/${PACKAGE}-${VERSION}-py3-none-any.whl
+
+test:
+	${PYTHON} -m pytest
+
+
+# VERSION SPECIFIC COMMANDS
+# make {command}_ver ver={version}
+
+install_ver:
+ifdef ver
+	${PYTHON} -m pip install ${PACKAGE}==${ver}
+else
+	@echo "No version specified"
+endif
+
+rebuild_ver:
+ifdef ver
+	${PYTHON} -m pip uninstall -y ${PACKAGE} && ${PYTHON} -m build && ${PYTHON} -m pip install dist/${PACKAGE}-${ver}-py3-none-any.whl
+else
+	@echo "No version specified"
+endif

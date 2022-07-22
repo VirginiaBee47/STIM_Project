@@ -5,9 +5,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "STIM_Module"
-version = "0.0.3"
+version = "0.1.0"
 authors = [
-  { name="Jaxton Willman", email="jaxtonwillman@gmail.com" },
+    { name = "Jaxton 'Jax' Willman", email =  "jaxtonwillman@ufl.edu" },
+    { name = "Benjamin 'Ben' Covert", email = "benjamin.covert@ufl.edu" },
+    { name = "David 'Sandy' Hutchins", email = "davidhutchins@ufl.edu" },
 ]
 description = "League of Legends STIM Module"
 readme = "README.md"
@@ -19,6 +21,18 @@ classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
 ]
+dependencies = [
+  "sphinx",
+  "matplotlib",
+  "tk",
+  "pandas",
+  "numpy",
+  "requests",
+  "datetime",
+]
+
+[project.optional-dependencies]
+dev = ["build", "bumpver", "twine", "pip-tools", "pytest"]
 
 [project.urls]
 "Homepage" = "https://jaxjaxw.github.io/STIM_Module/index.html"
@@ -34,9 +48,21 @@ exclude = ["STIM_Module.tests*"]  # empty by default
 namespaces = false  # true by default
 
 [project.scripts]
-LOLstats = "STIM_Module.application:main"
-hello-world = "STIM_Module:hello_world"
-hello-homeD = "STIM_Module:hello_homeD"
+lolstats = "STIM_Module.application:main"
 
 [project.gui-scripts]
-start = "STIM_Module.application:main"
+startapp = "STIM_Module.application:main"
+
+[tool.bumpver]
+current_version = "0.1.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"README.md" = ['dist/STIM_Module-{version}-py3-none-any.whl']
+"makefile" = ['VERSION = {version}']
+"src/STIM_Module/__init__.py" = ['__version__ = "{version}"']

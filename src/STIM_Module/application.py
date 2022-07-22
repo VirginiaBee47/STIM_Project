@@ -6,8 +6,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 from pandas import DataFrame
 
-from dummy_matplot import ret_graph, ret_pro_graph
-from api_funcs import *
+from STIM_Module.dummy_matplot import ret_graph, ret_pro_graph
+from STIM_Module.api_funcs import *
 
 
 def matplot_init(color="grey"):
