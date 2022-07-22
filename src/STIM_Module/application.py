@@ -41,8 +41,7 @@ def popUp(inst, master):
 
 def custom_destroy(win, sum_name, master):
     win.destroy()
-    pro_games = collect_data_for_rank()
-    SecondaryWindow(master, sum_name, pro_games)
+    SecondaryWindow(master, sum_name)
 
 
 def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=None):
@@ -57,6 +56,7 @@ def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=Non
 
         
 def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num=0, filename=None):
+    # TODO: refactor so graphs return as 1 Figure and draw that 1 figure
     matplot_init("white")
     df_obj = DataFrame()
     figure2 = plt.Figure(figsize=(4,4), dpi=50, facecolor='#707c8f')
@@ -75,7 +75,7 @@ def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num
 
 
 def delete_user_csvs(root):
-    print("This got called???")
+    # print("This got called???")
     dir_name = "./data"
     if os.path.exists(dir_name):
         files = os.listdir(dir_name)
@@ -96,7 +96,7 @@ class MainWindow(ttk.Frame):
        
 
 class SecondaryWindow(ttk.Frame): # Summoner Name Verification
-    def __init__(self, master, sum_name, pro_games):
+    def __init__(self, master, sum_name):
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         l_style = ttk.Style()
@@ -106,6 +106,7 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
             popUp(self, master)
             # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
         else:
+            pro_games = collect_data_for_rank()
             num_games = 3
             puuid, sum_level = get_summoner(sum_name.get())
             recent_game_ids = get_recent_game_ids(puuid, num_games)
@@ -139,6 +140,7 @@ class GameDisplayWindow(ttk.Frame):
 
 def main():
     root = tk.Tk()
+    root.title("Statistics Tracker and Improvement Manager")
     root.geometry("1080x720")
     root.config(bg="#808c9f")
     s = ttk.Style()
