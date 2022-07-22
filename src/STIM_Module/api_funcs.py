@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as dt
 
 import requests as rq
@@ -38,45 +39,45 @@ def check_summoner_exists(summoner_name):
         return False
 
 
-async def get_data(game_id, timeline=False):
+def call_api_for_gamedata(game_id, timeline=False):
     if timeline:
         timeline_string = "/timeline"
     else:
         timeline_string = ""
 
-    try:
-        response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
+    response = respect_rate_limit("https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
                                   timeline_string + "?api_key=" + API_KEY)
 
-        if response.status_code == 200:
-            data = json.loads(json.dumps(response.json()))
-        else:
-            raise NullGameException
+    if response.status_code == 200:
+        data = json.loads(json.dumps(response.json()))
+    else:
+        raise NullGameException
 
-        return data, timeline
-    except RateLimitException:
-        QUEUE.append((respect_rate_limit, "https://americas.api.riotgames.com/lol/match/v5/matches/" + game_id +
-                      timeline_string + "?api_key=" + API_KEY))
-
-        return "Added to queue due to rate limit exception", -1
+    return data, game_id, timeline
 
 
-async def get_raw_game_data(game_id):
-    raw_game_data, raw_game_timeline_data = None, None
-    tasks = [get_data(game_id), get_data(game_id, True)]
-    for data, is_timeline in await asyncio.gather(*tasks):
-        try:
-            if is_timeline:
-                raw_game_timeline_data = data
-            else:
-                raw_game_data = data
-        except Exception as error:
-            print("Exception found:", error)
+def get_raw_game_data(game_ids):
+    data_return = []
+    threads = []
+    for game_id in game_ids:
+        data_return.append((None, None, None))
+        data_return.append((None, None, None))
 
-    if raw_game_data is not None and raw_game_timeline_data is not None:
-        return raw_game_data, raw_game_timeline_data
-    elif raw_game_timeline_data == -1:
-        asyncio.sleep(10)
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for i in range(len(game_ids)):
+            threads.append(executor.submit(call_api_for_gamedata, game_ids[i]))
+            threads.append(executor.submit(call_api_for_gamedata, game_ids[i], True))
+
+        i = 0
+        for future in as_completed(threads):
+            try:
+                data, game_id, is_timeline = future.result()
+                data_return[i] = (data, game_id, is_timeline)
+            except Exception as e:
+                print(e)
+            i += 1
+
+    return data_return
 
 
 def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
@@ -98,7 +99,9 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I")
     if response.status_code == 200:
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
         summoner_name = data[5]['summonerName']
-        return make_game_csv(summoner_name, num_games=3)
+        create_sqlite_db(summoner_name)
+        game_ids = get_recent_game_ids(summoner_name, num_games=3)
+        add_data_to_db(summoner_name, num_games=3)
     else:
         print("Error code" + str(response.status_code))
 
@@ -207,11 +210,11 @@ def create_sqlite_db(summoner_name):
     if not os.path.exists("./data"):
         os.makedirs("./data")
 
-    connection = sqlite3.connect("data/" + summoner_name + '.db')
+    connection = sqlite3.connect("data/game_data.db")
     cursor = connection.cursor()
 
     try:
-        cursor.execute('''CREATE TABLE GAMEDATA 
+        query = f'''CREATE TABLE {"GAMEDATA_"+summoner_name} 
         (ID INT PRIMARY KEY,
         REGION CHAR(5) NOT NULL,
         VICTORY INTEGER NOT NULL,
@@ -221,7 +224,8 @@ def create_sqlite_db(summoner_name):
         ENDED_IN_SURRENDER INTEGER,
         GOLDTL CHAR(300) NOT NULL,
         XPTL CHAR(300) NOT NULL,
-        GLDDIFTL CHAR(300) NOT NULL);''')
+        GLDDIFTL CHAR(300) NOT NULL);'''
+        cursor.execute(query)
         connection.commit()
     except sqlite3.OperationalError as e:
         print(e, ": Assuming that .db file exists without error. Continuing", sep="")
@@ -230,7 +234,7 @@ def create_sqlite_db(summoner_name):
 
 
 def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
-    connection = sqlite3.connect("data/" + summoner_name + '.db')
+    connection = sqlite3.connect("data/game_data.db")
     cursor = connection.cursor()
 
     if summoner_puuid is None:
@@ -239,20 +243,37 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
+    pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
+
+    # check if games are already present and if they are remove them from needed calls
+    print(recent_game_ids)
     for game_id in recent_game_ids:
-        pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
+        match = re.match(pattern, str(game_id))
+
+        db_id = int(match.group(2))
+
+        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + summoner_name} WHERE ID=?);'''
+        cursor.execute(query, (db_id,))
+        if cursor.fetchone()[0] == 1:
+            print("Game ID: %i\talready exists. Skipping (no API call made)" % db_id)
+            recent_game_ids.remove(game_id)
+
+    print(recent_game_ids)
+    # collect all of the data (in no particular order)
+    data = get_raw_game_data(recent_game_ids)
+
+    for game_id in recent_game_ids:
+        for api_return in data:
+            if api_return[1] == game_id:
+                if api_return[2]:
+                    raw_game_timeline_data = api_return[0]
+                else:
+                    raw_game_data = api_return[0]
+
         match = re.match(pattern, str(game_id))
 
         db_id = int(match.group(2))
         region_id = match.group(1)
-
-        try:
-            cursor.execute('''SELECT * FROM GAMEDATA WHERE ID=?''', (db_id,))
-            print("Game ID: %f\talready exists. Skipping (no API call made)")
-            continue
-        except sqlite3.Error as e:
-            raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
-            print("made api call")
 
         champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
         gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
@@ -260,22 +281,22 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
         xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
         gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
 
-        params = [db_id, region_id, victory, champ, position, gamemode, surrender, gold_timeline, xp_timeline,
-                  gold_diff_timeline]
+        params = [db_id, region_id, victory, champ, position, gamemode, surrender,
+                     gold_timeline, xp_timeline,gold_diff_timeline]
 
         try:
-            cursor.execute(f'''INSERT INTO GAMEDATA 
-                               (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
-                               VALUES
-                               (?,?,?,?,?,?,?,?,?,?)''', params)
+            query = f'''INSERT INTO {"GAMEDATA_"+summoner_name} 
+                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
+                        VALUES
+                        (?,?,?,?,?,?,?,?,?,?)'''
+            cursor.execute(query, params)
         except sqlite3.IntegrityError as e:
             print(e, ": Skipping entry and continuing", sep="")
         connection.commit()
     connection.close()
-    return "data/%s.db" % summoner_name
 
 
-def filter_games_sql(summoner_name, filter_attr, filter_val):
+def filter_games(summoner_name, filter_attr, filter_val):
     filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
     champions = ['Aatrox', 'Ahri', 'Akali', 'Alistar', 'Amumu', 'Anivia', 'Annie', 'Ashe', 'AurelionSol', 'Azir',
                  'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia', 'Chogath', 'Corki',
@@ -324,12 +345,13 @@ def filter_games_sql(summoner_name, filter_attr, filter_val):
 
     filtered_files = []
 
-    connection = sqlite3.connect("data/%s.db" % summoner_name)
+    connection = sqlite3.connect("data/game_data.db")
     cursor = connection.cursor()
 
     params = (filter_attr, filter_val)
+    query = f'SELECT ID FROM {"GAMEDATA_"+summoner_name} WHERE ?=?'
 
-    cursor.execute("SELECT ID FROM GAMEDATA WHERE ?=?", params)
+    cursor.execute(query, params)
     entries = cursor.fetchall()
     return entries
 
@@ -446,3 +468,27 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             json.dump(data_dict, outfile)
 
     return filenames
+
+
+def collect_data_for_rank_oldver(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
+    valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
+    valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
+    valid_divisions = ["I", "II", "III", "IV"]
+
+    if queue not in valid_queues:
+        raise InvalidParamException("queue")
+    elif tier not in valid_tiers:
+        raise InvalidParamException("tier")
+    elif division not in valid_divisions:
+        raise InvalidParamException("division")
+
+    response = respect_rate_limit(
+        "https://na1.api.riotgames.com/lol/league/v4/entries/" + queue + "/" + tier + "/" + division + "?api_key=" +
+        API_KEY)
+
+    if response.status_code == 200:
+        data = response.json()  # this is a list of summoners in the given queue, tier, and division
+        summoner_name = data[5]['summonerName']
+        make_game_csv(summoner_name, num_games=3)
+    else:
+        print("Error code" + str(response.status_code))
