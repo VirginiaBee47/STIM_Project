@@ -5,10 +5,10 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 from pandas import DataFrame
+from threading import Thread
 
 from dummy_matplot import ret_graph, ret_pro_graph
 from api_funcs import *
-from summoner import *
 
 
 def matplot_init(color="grey"):
@@ -42,8 +42,7 @@ def popUp(inst, master):
 
 def custom_destroy(win, sum_name, master):
     win.destroy()
-    pro_games = collect_data_for_rank()
-    SecondaryWindow(master, sum_name, pro_games)
+    SecondaryWindow(master, sum_name)
 
 
 def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=None):
@@ -97,7 +96,9 @@ class MainWindow(ttk.Frame):
        
 
 class SecondaryWindow(ttk.Frame): # Summoner Name Verification
-    def __init__(self, master, sum_name, pro_games):
+    def __init__(self, master, sum_name, pro_games=None):
+        if pro_games is None:
+            pro_games = collect_data_for_rank()
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         l_style = ttk.Style()
