@@ -1,3 +1,4 @@
+from time import sleep, time
 import tkinter as tk
 from tkinter import CENTER, E, N, S, TOP, W, Label, StringVar, ttk
 import matplotlib
@@ -35,7 +36,7 @@ def styles_init():
     b_style.configure("My.TButton", background= "#808c9f", font=("Californian FB", 10))
     # Entry Default Styles NOT WOKRING
     e_style = ttk.Style()
-    e_style.configure("My.TEntry", background= "#909cAf", font=("Californian FB", 10), foregroun="red")
+    e_style.configure("My.TEntry", background= "#909cAf", font=("Californian FB", 10), foreground="dark blue")
 
 def popUp(inst, master): 
     inst.pack_forget()
@@ -52,6 +53,7 @@ def popUp(inst, master):
     b.place(relx=.5, rely=.7, anchor=CENTER)
     win.bind('<Return>', lambda event:custom_destroy(win, sum_name, master))
     e.focus()
+    win.protocol("WM_DELETE_WINDOW", lambda : custom_destroy(win, sum_name, master))
 
 def custom_destroy(win, sum_name, master):
     win.destroy()
@@ -132,25 +134,41 @@ class MainWindow(ttk.Frame):
 
 class SecondaryWindow(ttk.Frame): # Summoner Name Verification
     def __init__(self, master, sum_name, pro_games=None):
+        ttk.Frame.__init__(self, master, style="My.TFrame")
+
         if pro_games is None:
             #time_var = timeit.timeit(lambda: collect_data_for_rank(), number=1)
-            pro_games = collect_data_for_rank() # THIS TAKES 7 SECONDS THIS IS MULTITHREADABLE IF I REMOVE RETURN 
+            pro_games = []
+            pro_games_thread = Thread(target=collect_data_for_rank, args=("RANKED_SOLO_5x5", "DIAMOND", "I", pro_games)) # THIS TAKES 7 SECONDS THIS IS MULTITHREADABLE IF I REMOVE RETURN 
+            pro_games_thread.start()
             #print(time_var)
-        ttk.Frame.__init__(self, master, style="My.TFrame")
-        self.pack()
+        
+        
         if (check_summoner_exists(sum_name.get()) == False or sum_name.get() == ""):
             ttk.Label(self, text="Invalid Summoner Try Again!", style="Title.TLabel").grid(column=0, row=0)
+            self.update()
+            master.update()
             popUp(self, master)
             # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
         else:
             num_games = 3
             puuid, sum_level = get_summoner(sum_name.get())
             recent_game_ids = get_recent_game_ids(puuid, num_games)
-            ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
+            # ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
             # User Game Display
             csv_thread = Thread(target=make_game_csv, args=(sum_name.get(), puuid, num_games, recent_game_ids))
             csv_thread.start()
-            csv_thread.join()
+            self.pack()
+            dot = 0
+            dots = [".", "..", "..."]
+            while (csv_thread.is_alive() or pro_games_thread.is_alive()):
+                l = ttk.Label(self, text="Loading%s" % dots[dot % 3], style="Title.TLabel")
+                l.grid(column=0, row=0, sticky=W)
+                self.update()
+                master.update()
+                dot += 1
+                sleep(.3)
+                l.destroy()
             GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_games)
 
 class GameDisplayWindow(ttk.Frame):
