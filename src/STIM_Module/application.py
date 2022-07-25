@@ -182,12 +182,14 @@ class GameDisplayWindow(ttk.Frame):
         ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
         user_game_thread = AsyncGraphDraw(self, sum_name, game_ids[user_game_num], row_num=1)
         user_game_thread.start()
-        ttk.Button(self, text="View Next User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W))
+        ttk.Button(self, text="View Next User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W), pady=20)
+        ttk.Button(self, text="View Previous User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num-1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W))
         # Drawing Pro Games
         ttk.Label(self, text="Pro's Stats For \nGame %d" %((pro_game_num % 3) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
         pro_game_thread = AsyncGraphDraw(self, row_num=2, filename=pro_games[pro_game_num])
         pro_game_thread.start()
-        ttk.Button(self, text="View Next Pro Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W))
+        ttk.Button(self, text="View Next Pro Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W) pady=20)
+        ttk.Button(self, text="View Previous Pro Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W))
         # Place Holder Advice Label
         advice_string = "Do better forehead."
         ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=3, sticky=(W, N))
