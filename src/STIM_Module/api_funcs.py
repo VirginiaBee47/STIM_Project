@@ -98,11 +98,12 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I",
 
     if response.status_code == 200:
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
-        summoner_name = data[5]['summonerName']
+        summoner_name = data[7]['summonerName']
         create_sqlite_db(summoner_name)  # Creates a table in the database
-        game_ids = get_recent_game_ids(summoner_name, num_games=3)
+        game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=3)
         add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
         summoner_name_return.append(summoner_name)
+        print("DATA FOR SUMMONER ADDED")
     else:
         print("Error code" + str(response.status_code))
 
@@ -114,7 +115,7 @@ def get_recent_game_ids(puuid, num_games=1):
     if response.status_code == 200:
         return json.loads(json.dumps(response.json()))
     else:
-        print("ERROR FOUND --- CODE: " + str(response.status_code))
+        raise APICallResponseException(response.status_code)
         return []
 
 
@@ -182,6 +183,7 @@ def get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, puuid):
 
     return xp_timeline[-1], xp_timeline
 
+
 def get_general_summoner_stats(raw_game_data, puuid):
     summoner_index = raw_game_data['metadata']['participants'].index(puuid)
 
@@ -214,7 +216,8 @@ def create_sqlite_db(summoner_name):
     cursor = connection.cursor()
 
     try:
-        query = f'''CREATE TABLE {"GAMEDATA_"+summoner_name} 
+        print(summoner_name)
+        query = f'''CREATE TABLE {"GAMEDATA_" + "".join(summoner_name.split())} 
         (ID INT PRIMARY KEY,
         REGION CHAR(5) NOT NULL,
         VICTORY INTEGER NOT NULL,
@@ -252,7 +255,7 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
 
         db_id = int(match.group(2))
 
-        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + summoner_name} WHERE ID=?);'''
+        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ID=?);'''
         cursor.execute(query, (db_id,))
         if cursor.fetchone()[0] == 1:
             print("Game ID: %i\talready exists. Skipping (no API call made)" % db_id)
@@ -285,7 +288,7 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
                      gold_timeline, xp_timeline,gold_diff_timeline]
 
         try:
-            query = f'''INSERT INTO {"GAMEDATA_"+summoner_name} 
+            query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
                         (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
                         VALUES
                         (?,?,?,?,?,?,?,?,?,?)'''
@@ -347,7 +350,7 @@ def filter_games(summoner_name, filter_attr, filter_val):
     cursor = connection.cursor()
 
     params = (filter_attr, filter_val)
-    query = f'SELECT ID FROM {"GAMEDATA_"+summoner_name} WHERE ?=?'
+    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ?=?'
 
     cursor.execute(query, params)
     entries = cursor.fetchall()
