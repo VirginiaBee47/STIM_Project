@@ -80,7 +80,7 @@ def get_raw_game_data(game_ids):
     return data_return
 
 
-def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
+def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I", summoner_name_return=[]):
     valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
     valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
     valid_divisions = ["I", "II", "III", "IV"]
@@ -99,9 +99,10 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I")
     if response.status_code == 200:
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
         summoner_name = data[5]['summonerName']
-        create_sqlite_db(summoner_name)
+        create_sqlite_db(summoner_name)  # Creates a table in the database
         game_ids = get_recent_game_ids(summoner_name, num_games=3)
-        add_data_to_db(summoner_name, num_games=3)
+        add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
+        summoner_name_return.append(summoner_name)
     else:
         print("Error code" + str(response.status_code))
 
@@ -180,7 +181,6 @@ def get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, puuid):
         xp_timeline.append(raw_game_timeline_data['info']['frames'][i]['participantFrames'][timeline_index]['xp'])
 
     return xp_timeline[-1], xp_timeline
-
 
 def get_general_summoner_stats(raw_game_data, puuid):
     summoner_index = raw_game_data['metadata']['participants'].index(puuid)
@@ -342,8 +342,6 @@ def filter_games(summoner_name, filter_attr, filter_val):
             raise InvalidParamException("filter_val", "Value could not be converted to boolean")
     elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
         raise InvalidParamException("filter_val", "Invalid game map")
-
-    filtered_files = []
 
     connection = sqlite3.connect("data/game_data.db")
     cursor = connection.cursor()
