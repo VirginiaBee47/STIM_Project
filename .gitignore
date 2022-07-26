@@ -172,3 +172,4 @@ cython_debug/
 src/STIM_Module/user_settings/user_bEANS47.json
 src/STIM_Module/test_main.py
 *.json
+src/STIM_Module/data/game_data.db
