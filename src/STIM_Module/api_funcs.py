@@ -66,7 +66,7 @@ async def get_raw_game_data(game_id):
         raise NullGameException
 
 
-def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
+def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I", filenames=[]):
     valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
     valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
     valid_divisions = ["I", "II", "III", "IV"]
@@ -85,7 +85,7 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I")
     if response.status_code == 200:
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
         summoner_name = data[5]['summonerName']
-        return make_game_csv(summoner_name, num_games=3)
+        make_game_csv(summoner_name, num_games=3, filenames=filenames)
     else:
         print("Error code" + str(response.status_code))
 
@@ -190,7 +190,7 @@ def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponen
     return [user_gold_timeline[i] - opponent_gold_timeline[i] for i in range(len(user_gold_timeline))]
 
 
-def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None, filenames=[]):
     if not os.path.exists("./data"):
         # print("PATH DOES NOT EXIST")
         os.makedirs("./data")
@@ -201,7 +201,6 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
-    filenames = []
 
     for game_id in recent_game_ids:
         raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
@@ -229,8 +228,6 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
                          'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
 
             json.dump(data_dict, outfile)
-
-    return filenames
 
 
 def filter_games(summoner_name, filter_attr, filter_val):
