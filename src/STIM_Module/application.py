@@ -38,13 +38,16 @@ def styles_init():
     e_style = ttk.Style()
     e_style.configure("My.TEntry", background= "#909cAf", font=("Californian FB", 10), foreground="dark blue")
 
-def popUp(binst, master): 
+def popUp(binst, master, invalid=False): 
     binst.destroy()
     win = tk.Toplevel()
     win.config(bg="#808c9f")
     win.geometry("300x125")
     win.wm_title("Enter your Summoner Name")
-    l = ttk.Label(win, text="Enter Summoner Name:", style="Text.TLabel")
+    if invalid:
+        l = ttk.Label(win, text="Invalid input! Enter Summoner Name:", style="Text.TLabel")
+    else:
+        l = ttk.Label(win, text="Enter Summoner Name:", style="Text.TLabel")
     l.place(relx=.5, rely=.3, anchor=CENTER)
     sum_name = StringVar()
     e = ttk.Entry(win, width=10, textvariable=sum_name, style="My.TEntry")
@@ -59,7 +62,7 @@ def custom_destroy(win, sum_name, master):
     for ele in master.winfo_children():
         ele.destroy()
     if (check_summoner_exists(sum_name.get()) == False or sum_name.get() == ""):
-        popUp(win, master)
+        popUp(win, master, invalid=True)
         MainWindow(master, button=False)
     else:
         SecondaryWindow(master, sum_name)
@@ -197,6 +200,8 @@ class GameDisplayWindow(ttk.Frame):
         ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
         user_game_thread = AsyncGraphDraw(self, sum_name, game_ids[user_game_num], row_num=1)
         user_game_thread.start()
+        self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton", command=lambda: popUp(self.switch_button, master))
+        self.switch_button.grid(column=0, row=1, sticky=(N, W))
         ttk.Button(self, text="View Next User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W), pady=25)
         ttk.Button(self, text="View Previous User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num-1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W))
         # Drawing Pro Games
