@@ -1,11 +1,19 @@
-import csv, json, asyncio, re, os
-
-
-import requests as rq
+import asyncio
+import csv
+import json
+import os
+import re
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime as dt
 
-from new_exceptions import *
-from API_KEY import API_KEY
+import requests as rq
+
+from STIM_Module.API_KEY import API_KEY
+from STIM_Module.new_exceptions import *
+
+
+QUEUE = []
 
 
 def respect_rate_limit(url):
@@ -31,7 +39,7 @@ def check_summoner_exists(summoner_name):
         return False
 
 
-async def get_data(game_id, timeline=False):
+def call_api_for_gamedata(game_id, timeline=False):
     if timeline:
         timeline_string = "/timeline"
     else:
@@ -45,28 +53,34 @@ async def get_data(game_id, timeline=False):
     else:
         raise NullGameException
 
-    return data, timeline
+    return data, game_id, timeline
 
 
-async def get_raw_game_data(game_id):
-    raw_game_data, raw_game_timeline_data = None, None
-    tasks = [get_data(game_id), get_data(game_id, True)]
-    for data, is_timeline in await asyncio.gather(*tasks):
-        try:
-            if is_timeline:
-                raw_game_timeline_data = data
-            else:
-                raw_game_data = data
-        except Exception as error:
-            print("Exception found:", error)
+def get_raw_game_data(game_ids):
+    data_return = []
+    threads = []
+    for game_id in game_ids:
+        data_return.append((None, None, None))
+        data_return.append((None, None, None))
 
-    if raw_game_data is not None and raw_game_timeline_data is not None:
-        return raw_game_data, raw_game_timeline_data
-    else:
-        raise NullGameException
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for i in range(len(game_ids)):
+            threads.append(executor.submit(call_api_for_gamedata, game_ids[i]))
+            threads.append(executor.submit(call_api_for_gamedata, game_ids[i], True))
+
+        i = 0
+        for future in as_completed(threads):
+            try:
+                data, game_id, is_timeline = future.result()
+                data_return[i] = (data, game_id, is_timeline)
+            except Exception as e:
+                print(e)
+            i += 1
+
+    return data_return
 
 
-def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I", filenames=[]):
+def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I", summoner_name_return=[]):
     valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
     valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
     valid_divisions = ["I", "II", "III", "IV"]
@@ -84,8 +98,12 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I",
 
     if response.status_code == 200:
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
-        summoner_name = data[5]['summonerName']
-        make_game_csv(summoner_name, num_games=3, filenames=filenames)
+        summoner_name = data[7]['summonerName']
+        create_sqlite_db(summoner_name)  # Creates a table in the database
+        game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=3)
+        add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
+        summoner_name_return.append(summoner_name)
+        print("DATA FOR SUMMONER ADDED")
     else:
         print("Error code" + str(response.status_code))
 
@@ -97,7 +115,7 @@ def get_recent_game_ids(puuid, num_games=1):
     if response.status_code == 200:
         return json.loads(json.dumps(response.json()))
     else:
-        print("ERROR FOUND --- CODE: " + str(response.status_code))
+        raise APICallResponseException(response.status_code)
         return []
 
 
@@ -190,10 +208,37 @@ def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponen
     return [user_gold_timeline[i] - opponent_gold_timeline[i] for i in range(len(user_gold_timeline))]
 
 
-def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None, filenames=[]):
+def create_sqlite_db(summoner_name):
     if not os.path.exists("./data"):
-        # print("PATH DOES NOT EXIST")
         os.makedirs("./data")
+
+    connection = sqlite3.connect("data/game_data.db")
+    cursor = connection.cursor()
+
+    try:
+        print(summoner_name)
+        query = f'''CREATE TABLE {"GAMEDATA_" + "".join(summoner_name.split())} 
+        (ID INT PRIMARY KEY,
+        REGION CHAR(5) NOT NULL,
+        VICTORY INTEGER NOT NULL,
+        CHAMPION_PLAYED CHAR(25) NOT NULL,
+        POSITION_PLAYED CHAR(7),
+        GAMEMODE CHAR(7),
+        ENDED_IN_SURRENDER INTEGER,
+        GOLDTL CHAR(300) NOT NULL,
+        XPTL CHAR(300) NOT NULL,
+        GLDDIFTL CHAR(300) NOT NULL);'''
+        cursor.execute(query)
+        connection.commit()
+    except sqlite3.OperationalError as e:
+        print(e, ": Assuming that .db file exists without error. Continuing", sep="")
+
+    connection.close()
+
+
+def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    connection = sqlite3.connect("data/game_data.db")
+    cursor = connection.cursor()
 
     if summoner_puuid is None:
         summoner_puuid = get_summoner(summoner_name)[0]
@@ -201,39 +246,125 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
+    pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
+
+    # check if games are already present and if they are remove them from needed calls
+    print(recent_game_ids)
+    for game_id in recent_game_ids:
+        match = re.match(pattern, str(game_id))
+
+        db_id = int(match.group(2))
+
+        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ID=?);'''
+        cursor.execute(query, (db_id,))
+        if cursor.fetchone()[0] == 1:
+            print("Game ID: %i\talready exists. Skipping (no API call made)" % db_id)
+            recent_game_ids.remove(game_id)
+
+    print(recent_game_ids)
+    # collect all of the data (in no particular order)
+    data = get_raw_game_data(recent_game_ids)
 
     for game_id in recent_game_ids:
-        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
-        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
-            filenames.append("data/%s_%s.csv" % (summoner_name, game_id))
-            writer = csv.writer(outfile)
-            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
+        for api_return in data:
+            if api_return[1] == game_id:
+                if api_return[2]:
+                    raw_game_timeline_data = api_return[0]
+                else:
+                    raw_game_data = api_return[0]
 
-            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
-            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
-            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+        match = re.match(pattern, str(game_id))
 
-            for minute in range(len(gold_timeline)):
-                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
+        db_id = int(match.group(2))
+        region_id = match.group(1)
 
-        with open("data/%s_%s.json" % (summoner_name, game_id), 'w') as outfile:
-            # gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
-            # xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
-            # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+        champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+        gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
+        gold_timeline = str(get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2])
+        xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
+        gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
 
-            champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
-            game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
+        params = [db_id, region_id, victory, champ, position, gamemode, surrender,
+                     gold_timeline, xp_timeline,gold_diff_timeline]
 
-            data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
-                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
-
-            json.dump(data_dict, outfile)
+        try:
+            query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
+                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
+                        VALUES
+                        (?,?,?,?,?,?,?,?,?,?)'''
+            cursor.execute(query, params)
+        except sqlite3.IntegrityError as e:
+            print(e, ": Skipping entry and continuing", sep="")
+        connection.commit()
+    connection.close()
 
 
 def filter_games(summoner_name, filter_attr, filter_val):
+    filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
+    champions = ['Aatrox', 'Ahri', 'Akali', 'Alistar', 'Amumu', 'Anivia', 'Annie', 'Ashe', 'AurelionSol', 'Azir',
+                 'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia', 'Chogath', 'Corki',
+                 'Darius', 'Diana', 'Draven', 'DrMundo', 'Ekko', 'Elise', 'Evelynn', 'Ezreal', 'FiddleSticks',
+                 'Fiora', 'Fizz', 'Galio', 'Gangplank', 'Garen', 'Gnar', 'Gragas', 'Graves', 'Hecarim', 'Heimerdinger',
+                 'Illaoi', 'Irelia', 'Ivern', 'Janna', 'JarvanIV', 'Jax', 'Jayce', 'Jhin', 'Jinx', 'Kalista', 'Karma',
+                 'Karthus', 'Kassadin', 'Katarina', 'Kayle', 'Kennen', 'Khazix', 'Kindred', 'Kled', 'KogMaw', 'Leblanc',
+                 'LeeSin', 'Leona', 'Lissandra', 'Lucian', 'Lulu', 'Lux', 'Malphite', 'Malzahar', 'Maokai', 'MasterYi',
+                 'MissFortune', 'MonkeyKing', 'Mordekaiser', 'Morgana', 'Nami', 'Nasus', 'Nautilus', 'Nidalee',
+                 'Nocturne', 'Nunu', 'Olaf', 'Orianna', 'Pantheon', 'Poppy', 'Quinn', 'Rammus', 'RekSai', 'Renekton',
+                 'Rengar', 'Riven', 'Rumble', 'Ryze', 'Sejuani', 'Shaco', 'Shen', 'Shyvana', 'Singed', 'Sion', 'Sivir',
+                 'Skarner', 'Sona', 'Soraka', 'Swain', 'Syndra', 'TahmKench', 'Taliyah', 'Talon', 'Taric', 'Teemo',
+                 'Thresh', 'Tristana', 'Trundle', 'Tryndamere', 'TwistedFate', 'Twitch', 'Udyr', 'Urgot', 'Varus',
+                 'Vayne', 'Veigar', 'Velkoz', 'Vi', 'Viktor', 'Vladimir', 'Volibear', 'Warwick', 'Xerath', 'XinZhao',
+                 'Yasuo', 'Yorick', 'Zac', 'Zed', 'Ziggs', 'Zilean', 'Zyra']
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
+    game_modes = ['CLASSIC', 'ARAM']
+    game_maps = []
+
+    if filter_attr not in filter_attributes:
+        raise InvalidParamException("filter_attr")
+    elif filter_attr == 'CHAMPION_PLAYED' and filter_val not in champions:
+        raise InvalidParamException("filter_val", "Champion not implemented yet")
+    elif filter_attr == 'VICTORY':
+        try:
+            if bool(filter_val):
+                filter_val = 1
+            else:
+                filter_val = 0
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'POSITION_PLAYED' and filter_val not in positions:
+        raise InvalidParamException("filter_val", "Position does not exist")
+    elif filter_attr == 'GAMEMODE' and filter_val not in game_modes:
+        raise InvalidParamException("filter_val", "Invalid game mode")
+    elif filter_attr == 'ENDED_IN_SURRENDER':
+        try:
+            if bool(filter_val):
+                filter_val = 1
+            else:
+                filter_val = 0
+        except Exception:
+            raise InvalidParamException("filter_val", "Value could not be converted to boolean")
+    elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
+        raise InvalidParamException("filter_val", "Invalid game map")
+
+    connection = sqlite3.connect("data/game_data.db")
+    cursor = connection.cursor()
+
+    params = (filter_attr, filter_val)
+    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ?=?'
+
+    cursor.execute(query, params)
+    entries = cursor.fetchall()
+    return entries
+
+
+# The below functions are old/unused and may break things
+
+
+def filter_games_json(summoner_name, filter_attr, filter_val):
+    # NOTE: filter_games_json has been deprecated due to the performance enhancement provided by sqlite3 therefore it might
+    # break upon use in the future
     filter_attributes = ["victory", "champion_played", "position_played", "game_mode", "ended_in_surrender"]
     champions = ['MasterYi', 'Garen', 'Lucian']
-    # TODO: add in every champion id as it is stored in the json (not always intuitive)
     positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
     game_modes = ['CLASSIC', 'ARAM']
     game_maps = []
@@ -292,3 +423,73 @@ def filter_games(summoner_name, filter_attr, filter_val):
         for match in pattern.finditer(file_path_str):
             filtered_game_ids.append(match.group(1))
     return filtered_game_ids
+
+
+def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+    # NOTE: this function is going to be deprecated shortly because of the efficiencies afforded by writing to a sqlite3
+    # database. Program may break upon use in the future
+
+    if not os.path.exists("./data"):
+        # print("PATH DOES NOT EXIST")
+        os.makedirs("./data")
+
+    if summoner_puuid is None:
+        summoner_puuid = get_summoner(summoner_name)[0]
+
+    if recent_game_ids is None:
+        recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
+
+    filenames = []
+
+    for game_id in recent_game_ids:
+        raw_game_data, raw_game_timeline_data = asyncio.run(get_raw_game_data(game_id))
+        with open("data/%s_%s.csv" % (summoner_name, game_id), 'w', newline='') as outfile:
+            filenames.append("data/%s_%s.csv" % (summoner_name, game_id))
+            writer = csv.writer(outfile)
+            writer.writerow(["Minute", "Total Gold", "Total Exp", "Gold Diff"])
+
+            gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            for minute in range(len(gold_timeline)):
+                writer.writerow([minute, gold_timeline[minute], xp_timeline[minute], gold_diff_timeline[minute]])
+
+        with open("data/%s_%s.json" % (summoner_name, game_id), 'w') as outfile:
+            # gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2]
+            # xp_timeline = get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1]
+            # gold_diff_timeline = get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+            champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+            game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
+
+            data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
+                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
+
+            json.dump(data_dict, outfile)
+
+    return filenames
+
+
+def collect_data_for_rank_oldver(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I"):
+    valid_queues = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
+    valid_tiers = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"]
+    valid_divisions = ["I", "II", "III", "IV"]
+
+    if queue not in valid_queues:
+        raise InvalidParamException("queue")
+    elif tier not in valid_tiers:
+        raise InvalidParamException("tier")
+    elif division not in valid_divisions:
+        raise InvalidParamException("division")
+
+    response = respect_rate_limit(
+        "https://na1.api.riotgames.com/lol/league/v4/entries/" + queue + "/" + tier + "/" + division + "?api_key=" +
+        API_KEY)
+
+    if response.status_code == 200:
+        data = response.json()  # this is a list of summoners in the given queue, tier, and division
+        summoner_name = data[5]['summonerName']
+        make_game_csv(summoner_name, num_games=3)
+    else:
+        print("Error code" + str(response.status_code))

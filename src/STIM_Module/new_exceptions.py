@@ -24,3 +24,10 @@ class RateLimitException(Exception):
             return f'API calls in the past second: {self.second_limit_progress}\nSlow Down!'
         else:
             return f'API calls in the past two minutes: {self.two_min_limit_progress}\nSlow Down!'
+
+class APICallResponseException(Exception):
+    def __init__(self, code):
+        self.code = code
+
+    def __str__(self):
+        return f'Error: Response code {self.code} returned.'

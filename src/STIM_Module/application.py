@@ -1,10 +1,11 @@
+import timeit
 from time import sleep, time
 import tkinter as tk
 from tkinter import CENTER, E, N, S, TOP, W, Label, StringVar, ttk
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import os
+import sqlite3 as sq
 from pandas import DataFrame
 from threading import Thread
 from PIL import ImageTk, Image
@@ -22,23 +23,27 @@ def matplot_init(color="grey"):
     matplotlib.rcParams['axes.edgecolor'] = "black"
     matplotlib.rcParams['axes.facecolor'] = "black"
 
+
 def styles_init():
     # Frame Default Styles
     frame_style = ttk.Style()
     frame_style.configure('My.TFrame', background="#808c9f")
     # Labels Default Styles
     l_style = ttk.Style()
-    l_style.configure("Text.TLabel", background= "#808c9f", foreground="white", anchor="center", font=("Californian FB", 12))
+    l_style.configure("Text.TLabel", background="#808c9f", foreground="white", anchor="center",
+                      font=("Californian FB", 12))
     t_l_style = ttk.Style()
-    t_l_style.configure("Title.TLabel", background= "#808c9f", foreground="white", anchor="center", font=("Californian FB", 16, "bold"))
+    t_l_style.configure("Title.TLabel", background="#808c9f", foreground="white", anchor="center",
+                        font=("Californian FB", 16, "bold"))
     # Buttons Default Styles
     b_style = ttk.Style()
-    b_style.configure("My.TButton", background= "#808c9f", font=("Californian FB", 10))
+    b_style.configure("My.TButton", background="#808c9f", font=("Californian FB", 10))
     # Entry Default Styles NOT WOKRING
     e_style = ttk.Style()
-    e_style.configure("My.TEntry", background= "#909cAf", font=("Californian FB", 10), foreground="dark blue")
+    e_style.configure("My.TEntry", background="#909cAf", font=("Californian FB", 10), foreground="dark blue")
 
-def popUp(binst, master, invalid=False): 
+
+def popUp(binst, master, invalid=False):
     binst.destroy()
     win = tk.Toplevel()
     win.config(bg="#808c9f")
@@ -52,11 +57,13 @@ def popUp(binst, master, invalid=False):
     sum_name = StringVar()
     e = ttk.Entry(win, width=10, textvariable=sum_name, style="My.TEntry")
     e.place(relx=.5, rely=.5, anchor=CENTER)
-    b = ttk.Button(win ,text="Enter", style= "My.TButton", command=lambda win=win, sum_name=sum_name, master=master: custom_destroy(win, sum_name, master))
+    b = ttk.Button(win, text="Enter", style="My.TButton",
+                   command=lambda win=win, sum_name=sum_name, master=master: custom_destroy(win, sum_name, master))
     b.place(relx=.5, rely=.7, anchor=CENTER)
-    win.bind('<Return>', lambda event:custom_destroy(win, sum_name, master))
+    win.bind('<Return>', lambda event: custom_destroy(win, sum_name, master))
     e.focus()
-    win.protocol("WM_DELETE_WINDOW", lambda : custom_destroy(win, sum_name, master))
+    win.protocol("WM_DELETE_WINDOW", lambda: custom_destroy(win, sum_name, master))
+
 
 def custom_destroy(win, sum_name, master):
     for ele in master.winfo_children():
@@ -69,27 +76,23 @@ def custom_destroy(win, sum_name, master):
 
 
 class AsyncGraphDraw(Thread):
-    def __init__(self, parent, sum_name=None, game_id=None, row_num=1, filename=None):
+    def __init__(self, parent, sum_name=None, game_id=None, row_num=1, is_pro=False):
         super().__init__()
         self.parent = parent
         self.sum_name = sum_name
         self.game_id = game_id
         self.row_num = row_num
-        self.filename = filename
-    
+        self.is_pro = is_pro
+
     def run(self):
-        if self.filename is not None:
-            draw_graph(self.parent, "g", col_num=1, row_num=self.row_num, filename=self.filename)
-            draw_graph(self.parent, "e", col_num=2, row_num=self.row_num, filename=self.filename)
-            draw_graph(self.parent, "d", col_num=3, row_num=self.row_num, filename=self.filename)
+        if self.is_pro:
+            draw_graph(self.parent, "g", self.sum_name[0], self.game_id, 1, self.row_num)
+            draw_graph(self.parent, "e", self.sum_name[0], self.game_id, 2, self.row_num)
+            draw_graph(self.parent, "d", self.sum_name[0], self.game_id, 3, self.row_num)
         else:
             draw_graph(self.parent, "g", self.sum_name.get(), self.game_id, 1, self.row_num)
             draw_graph(self.parent, "e", self.sum_name.get(), self.game_id, 2, self.row_num)
             draw_graph(self.parent, "d", self.sum_name.get(), self.game_id, 3, self.row_num)
-
-
-
-
 
 
 def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=None):
@@ -102,11 +105,11 @@ def draw_all_graphs(parent, sum_name=None, game_id=None, row_num=1, filename=Non
         draw_graph(parent, "e", sum_name.get(), game_id, 2, row_num)
         draw_graph(parent, "d", sum_name.get(), game_id, 3, row_num)
 
-        
+
 def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num=0, filename=None):
     matplot_init("white")
     df_obj = DataFrame()
-    figure2 = plt.Figure(figsize=(4,4), dpi=50, facecolor='#707c8f')
+    figure2 = plt.Figure(figsize=(4, 4), dpi=50, facecolor='#707c8f')
     ax2 = figure2.add_subplot(111)
     ax2.patch.set_facecolor('black')
     line2 = FigureCanvasTkAgg(figure2, parent)
@@ -114,8 +117,8 @@ def draw_graph(parent, type="g", sum_name=None, game_id=None, col_num=0, row_num
         df_obj, xVar, yVar, line_color = ret_graph(type, sum_name, game_id)
     else:
         df_obj, xVar, yVar, line_color = ret_pro_graph(type, filename)
-    df_obj = df_obj[[xVar,yVar]].groupby(xVar).sum()
-    df_obj.plot(kind='line', legend=True, ax=ax2, color=line_color ,marker='o', fontsize=10, ylabel=yVar)
+    df_obj = df_obj[[xVar, yVar]].groupby(xVar).sum()
+    df_obj.plot(kind='line', legend=True, ax=ax2, color=line_color, marker='o', fontsize=10, ylabel=yVar)
     ax2.set_title("Time Vs. %s" % yVar)
     widget = line2.get_tk_widget()
     widget.grid(column=col_num, row=row_num)
@@ -130,14 +133,15 @@ def delete_user_csvs(root):
                 os.remove(os.path.join(dir_name, file))
     root.destroy()
 
+
 class MainWindow(ttk.Frame):
     def __init__(self, master, button=True):
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         if button:
             self.login_button = ttk.Button(self, text="Log In", command=popUp, style="My.TButton")
-            self.login_button['command'] = lambda inst=self, master=master : popUp(self.login_button, master)
-            self.login_button.grid(column=1, row= 3, sticky=N)
+            self.login_button['command'] = lambda inst=self, master=master: popUp(self.login_button, master)
+            self.login_button.grid(column=1, row=3, sticky=N)
         what_is_STIM = "STIM is a companion app for Riot Games' multiplayer online battle arena (MOBA) game\
  League of Legends. What this companion app does is it pulls real match data from your most recent\
  3 games and 3 random games from a pro player, and displays important statistics such as gold and\
@@ -149,32 +153,48 @@ class MainWindow(ttk.Frame):
         credit = "Project Leader and Backend:\nBenjamin Covert\nFront End and GUI:\nDavid Hutchins\nGame Analysis and Distribution:\nJaxton Willman"
         if os.path.exists("./assets/Images/lol_image.jpg"):
             self.img = ImageTk.PhotoImage(Image.open("./assets/Images/lol_image.jpg").resize((500, 250)))
-        ttk.Label(self, text="Welcome to The League of Legends \nStatistics Tracker and Improvement Manager \nor STIM for short!", style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=0, sticky=N)
-        ttk.Label(self, text="What is STIM?", style="Title.TLabel", anchor="center", justify="center").grid(column=0, row=1, sticky=N)
-        ttk.Label(self, text=what_is_STIM, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(column=0, row=2, sticky=N)
-        ttk.Label(self, text="How to Use it?", style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=1, sticky=N)
-        ttk.Label(self, text=how_to_use, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(column=1, row=2, sticky=N)
-        ttk.Label(self, text="Credits", style="Title.TLabel", anchor="center", justify="center").grid(column=2, row=1, sticky=N)
-        ttk.Label(self, text=credit, style="Title.TLabel", anchor="center", justify="left", wraplength=300).grid(column=2, row=2, sticky=N)
-        ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4, columnspan=3)
-class SecondaryWindow(ttk.Frame): # Summoner Name Verification
-    def __init__(self, master, sum_name, pro_games=None):
+        ttk.Label(self,
+                  text="Welcome to The League of Legends \nStatistics Tracker and Improvement Manager \nor STIM for short!",
+                  style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=0, sticky=N)
+        ttk.Label(self, text="What is STIM?", style="Title.TLabel", anchor="center", justify="center").grid(column=0,
+                                                                                                            row=1,
+                                                                                                            sticky=N)
+        ttk.Label(self, text=what_is_STIM, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(
+            column=0, row=2, sticky=N)
+        ttk.Label(self, text="How to Use it?", style="Title.TLabel", anchor="center", justify="center").grid(column=1,
+                                                                                                             row=1,
+                                                                                                             sticky=N)
+        ttk.Label(self, text=how_to_use, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(
+            column=1, row=2, sticky=N)
+        ttk.Label(self, text="Credits", style="Title.TLabel", anchor="center", justify="center").grid(column=2, row=1,
+                                                                                                      sticky=N)
+        ttk.Label(self, text=credit, style="Title.TLabel", anchor="center", justify="left", wraplength=300).grid(
+            column=2, row=2, sticky=N)
+        ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4,
+                                                                                                   columnspan=3)
+
+
+class SecondaryWindow(ttk.Frame):  # Summoner Name Verification
+    def __init__(self, master, sum_name, pro_name=None):
         ttk.Frame.__init__(self, master, style="My.TFrame")
 
-        if pro_games is None:
-            #time_var = timeit.timeit(lambda: collect_data_for_rank(), number=1)
-            pro_games = []
-            pro_games_thread = Thread(target=collect_data_for_rank, args=("RANKED_SOLO_5x5", "DIAMOND", "I", pro_games)) # THIS TAKES 7 SECONDS THIS IS MULTITHREADABLE IF I REMOVE RETURN 
-            pro_games_thread.start()
-            #print(time_var)
-            # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
-        
+        # time_var = timeit.timeit(lambda: collect_data_for_rank(), number=1)
+        pro_name = []
+        pro_games_thread = Thread(target=collect_data_for_rank, args=("RANKED_SOLO_5x5", "DIAMOND", "I",
+                                                                      pro_name))
+                                    # THIS TAKES 7 SECONDS THIS IS MULTITHREADABLE IF I REMOVE RETURN
+        pro_games_thread.start()
+        # print(time_var)
+        # TODO: Label is not showing up before popUp is called, not a big deal just good for flare
+
         num_games = 3
         puuid, sum_level = get_summoner(sum_name.get())
         recent_game_ids = get_recent_game_ids(puuid, num_games)
+
         # ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
         # User Game Display
-        csv_thread = Thread(target=make_game_csv, args=(sum_name.get(), puuid, num_games, recent_game_ids))
+        create_sqlite_db(sum_name.get())
+        csv_thread = Thread(target=add_data_to_db, args=(sum_name.get(), puuid, num_games, recent_game_ids))
         csv_thread.start()
         self.pack()
         dot = 0
@@ -187,29 +207,52 @@ class SecondaryWindow(ttk.Frame): # Summoner Name Verification
             dot += 1
             sleep(.3)
             l.destroy()
-        GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_games)
+
+        connection = sq.connect("data/game_data.db")
+        cursor = connection.cursor()
+
+        query = f'SELECT ID FROM {"GAMEDATA_" + "".join(str(pro_name[0]).split())}'
+        cursor.execute(query)
+        numeric_ids = [ID[0] for ID in cursor.fetchall()]
+        pro_game_ids = ['NA1_' + str(ID) for ID in numeric_ids]
+
+        GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_name, pro_game_ids=pro_game_ids)
+
 
 class GameDisplayWindow(ttk.Frame):
-    def __init__(self, master, parent,sum_name, user_game_num, pro_game_num, game_ids, pro_games):
+    def __init__(self, master, parent, sum_name, user_game_num, pro_game_num, game_ids, pro_name, pro_game_ids):
         parent.pack_forget()
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         _, sum_level = get_summoner(sum_name.get())
         recent_game_id = game_ids[user_game_num]
-        ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)), style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx= 5)
-        ttk.Label(self, text="%s's Stats For \nGame %s" %(sum_name.get(), ((user_game_num % 3) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
+        ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)),
+                  style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx=5)
+        ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % 3) + 1)),
+                  style="Title.TLabel").grid(column=0, row=1, sticky=W)
         user_game_thread = AsyncGraphDraw(self, sum_name, game_ids[user_game_num], row_num=1)
         user_game_thread.start()
-        self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton", command=lambda: popUp(self.switch_button, master))
+        self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton",
+                                        command=lambda: popUp(self.switch_button, master))
         self.switch_button.grid(column=0, row=1, sticky=(N, W))
-        ttk.Button(self, text="View Next User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num+1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W), pady=25)
-        ttk.Button(self, text="View Previous User Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, ((user_game_num-1) % 3), pro_game_num, game_ids, pro_games)).grid(column=0, row=1, sticky=(S, W))
+        ttk.Button(self, text="View Next User Game", style="My.TButton",
+                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num + 1) % 3), pro_game_num,
+                                                     game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W), pady=25)
+        ttk.Button(self, text="View Previous User Game", style="My.TButton",
+                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num - 1) % 3), pro_game_num,
+                                                     game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W))
         # Drawing Pro Games
-        ttk.Label(self, text="Pro's Stats For \nGame %d" %((pro_game_num % 3) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
-        pro_game_thread = AsyncGraphDraw(self, row_num=2, filename=pro_games[pro_game_num])
+        ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(
+            column=0, row=2, sticky=W)
+        print("IDS:", pro_game_ids)
+        pro_game_thread = AsyncGraphDraw(self, pro_name, pro_game_ids[pro_game_num], row_num=2, is_pro=True)
         pro_game_thread.start()
-        ttk.Button(self, text="View Next Pro Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W), pady=25)
-        ttk.Button(self, text="View Previous Pro Game", style="My.TButton", command=lambda : GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3), game_ids, pro_games)).grid(column=0, row=2, sticky=(S, W))
+        ttk.Button(self, text="View Next Pro Game", style="My.TButton",
+                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3),
+                                                     game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W), pady=25)
+        ttk.Button(self, text="View Previous Pro Game", style="My.TButton",
+                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3),
+                                                     game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W))
         # Place Holder Advice Label
         advice_string = "Do better forehead."
         ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=3, sticky=(W, N))
@@ -223,9 +266,9 @@ def main():
     root.title("Statistics Tracker and Improvement Manager")
     styles_init()
     main_window = MainWindow(root)
-    root.protocol("WM_DELETE_WINDOW", lambda : delete_user_csvs(root))
+    root.protocol("WM_DELETE_WINDOW", lambda: delete_user_csvs(root))
     root.mainloop()
 
 
-if __name__ == "__main__":
+if (__name__ == "__main__"):
     main()

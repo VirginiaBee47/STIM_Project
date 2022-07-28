@@ -13,8 +13,9 @@
 *.vsix
 
 
-# Ignore Data
-*.csv
+# Ignore program specific data and settings
+tmp_data/*
+user_settings/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -171,4 +172,4 @@ cython_debug/
 src/STIM_Module/user_settings/user_bEANS47.json
 src/STIM_Module/test_main.py
 *.json
-src/STIM_Module/paramPassback.py
+src/STIM_Module/data/game_data.db
