@@ -19,10 +19,10 @@ df = pd.read_csv("data/bEANS47_NA1_4386437748.csv")
 # df = pd.DataFrame(data)
 
 
+# TODO: Compare USER against PRO
+# TODO: Ignore games with -1 values for gold differential stats
 
-# Ignore games with -1 values for gold differential stats
-
-
+# Gold analysis
 def gold_analysis(df): # Pass in raw dataframe
     gold_net = [500] * len(df)
     df['Gold Net'] = gold_net
@@ -47,6 +47,7 @@ def gold_analysis(df): # Pass in raw dataframe
     return df, avg_gpm, gpm_below_300
 
 
+# XP analysis
 def xp_analysis(df): # Pass in dataframe after gold_analysis is done
     xppm = [0] * len(df)
     df['xppm'] = xppm
@@ -58,19 +59,6 @@ def xp_analysis(df): # Pass in dataframe after gold_analysis is done
     xp_below_300 = df[df["xppm"] < 300]['Minute'][1:-1].tolist()
     
     return df, avg_xppm, xp_below_300
-
-
-
-
-
-
-    
-
-
-
-
-print(df)
-
 
 
 
@@ -132,7 +120,6 @@ basic_gold_earn = [
     "The inhibitor turret is worth 150 gold with 50 additional gold for participating.",
     "The nexus turret is worth 50 gold.",
     "Destroying the nexus grants you 50 gold! This is important to get!",
-    
 ]
 
 
@@ -191,10 +178,10 @@ lol_tips = [
 
 def just_the_tips(df):
     # Do data processing
-    dev_print = True
+    dev_print = False
     
-    (df, avg_gpm, gpm_below_300) = gold_analysis(df)
-    (df, avg_xppm, xp_below_300) = xp_analysis(df)
+    df, avg_gpm, gpm_below_300 = gold_analysis(df)
+    df, avg_xppm, xp_below_300 = xp_analysis(df)
     
     
     if dev_print:
@@ -203,33 +190,33 @@ def just_the_tips(df):
         print(xp_below_300)
         print("\nEND DEV\n")
     
+    tips = []
     
-    
-    print("For this game, you averaged around {:d} gold and {:d} xp per minute\n".format(avg_gpm, avg_xppm))
+    tips.append("For this game, you averaged around {:d} gold and {:d} xp per minute\n".format(avg_gpm, avg_xppm))
     
     # Print gold info
     if len(gpm_below_300) > 0:
-        print("You were below 300 gold per minute during these minutes: " + str(display_range(gpm_below_300)))
-        print("The silver tier is generally around 351 gpm.")
+        tips.append("You were below 300 gold per minute during these minutes: " + str(display_range(gpm_below_300)))
+        tips.append("The silver tier is generally around 351 gpm.")
     else:
-        print("Hey! Your GPM is above 300! You should be proud of yourself!")
+        tips.append("Hey! Your GPM is above 300! You should be proud of yourself!")
     
     # Print xp info
     if len(xp_below_300) > 0:
-        print("You were below 300 XP per minute during these minutes: " + str(display_range(xp_below_300)))
-        print("You should try to improve your XP per minute by playing more games.")
+        tips.append("You were below 300 XP per minute during these minutes: " + str(display_range(xp_below_300)))
+        tips.append("You should try to improve your XP per minute by playing more games.")
     else:
-        print("Hey! Your XP per minute is above 300! You should be proud of yourself!")
+        tips.append("Hey! Your XP per minute is above 300! You should be proud of yourself!")
     
     
     # Print tips
-    print("\nHere are some tips to help you improve:")
-    
-    
+    tips.append("\nHere are some tips to help you improve:")
     
     
     # Based on conditions, return a list of tips
-    tips = ["Life Tip: " + random.choice(life_tips), "Gold Tip: " + random.choice(gold_tips), "Exp Tip: " + random.choice(exp_tips)]
+    tips.append("Life Tip: " + random.choice(life_tips))
+    tips.append("Gold Tip: " + random.choice(support_gold_tips))
+    tips.append("Exp Tip: " + random.choice(jungler_gold_tips))
     
     # Tiny chance for a snarky tip
     if random.random() < 0.01:
@@ -248,11 +235,5 @@ def just_the_tips(df):
 
 
 print(*just_the_tips(df), sep = "\n")
-
-
-
-
-
-
 
 

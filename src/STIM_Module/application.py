@@ -10,8 +10,9 @@ from pandas import DataFrame
 from threading import Thread
 from PIL import ImageTk, Image
 
-from dummy_matplot import ret_graph, ret_pro_graph
-from api_funcs import *
+from STIM_Module.dummy_matplot import ret_graph, ret_pro_graph
+from STIM_Module.api_funcs import *
+from STIM_Module.analysis import just_the_tips
 
 
 def matplot_init(color="grey"):
@@ -138,40 +139,52 @@ class MainWindow(ttk.Frame):
     def __init__(self, master, button=True):
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
+        
         if button:
             self.login_button = ttk.Button(self, text="Log In", command=popUp, style="My.TButton")
             self.login_button['command'] = lambda inst=self, master=master: popUp(self.login_button, master)
             self.login_button.grid(column=1, row=3, sticky=N)
-        what_is_STIM = "STIM is a companion app for Riot Games' multiplayer online battle arena (MOBA) game\
- League of Legends. What this companion app does is it pulls real match data from your most recent\
- 3 games and 3 random games from a pro player, and displays important statistics such as gold and\
- experience gain and the gold differential versus your opponent. Our app displays this data and\
- also formulates an analysis to provide you tips and advice on how to improve your gameplay."
-        how_to_use = "1. Login using your summoner username\n2. Scroll through your user games and pro games independently\n\
-3. Comparison between the two displayed games will be displayed in the advice section below the graphs.\n\
-4. Invalid summoner names will be rejected and you will be re-prompted for a valid summoner name"
-        credit = "Project Leader and Backend:\nBenjamin Covert\nFront End and GUI:\nDavid Hutchins\nGame Analysis and Distribution:\nJaxton Willman"
-        if os.path.exists("./assets/Images/lol_image.jpg"):
-            self.img = ImageTk.PhotoImage(Image.open("./assets/Images/lol_image.jpg").resize((500, 250)))
-        ttk.Label(self,
-                  text="Welcome to The League of Legends \nStatistics Tracker and Improvement Manager \nor STIM for short!",
-                  style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=0, sticky=N)
-        ttk.Label(self, text="What is STIM?", style="Title.TLabel", anchor="center", justify="center").grid(column=0,
-                                                                                                            row=1,
-                                                                                                            sticky=N)
-        ttk.Label(self, text=what_is_STIM, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(
-            column=0, row=2, sticky=N)
-        ttk.Label(self, text="How to Use it?", style="Title.TLabel", anchor="center", justify="center").grid(column=1,
-                                                                                                             row=1,
-                                                                                                             sticky=N)
-        ttk.Label(self, text=how_to_use, style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(
-            column=1, row=2, sticky=N)
-        ttk.Label(self, text="Credits", style="Title.TLabel", anchor="center", justify="center").grid(column=2, row=1,
-                                                                                                      sticky=N)
-        ttk.Label(self, text=credit, style="Title.TLabel", anchor="center", justify="left", wraplength=300).grid(
-            column=2, row=2, sticky=N)
-        ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4,
-                                                                                                   columnspan=3)
+        
+        
+        title = "Welcome to The League of Legends \nStatistics Tracker and Improvement Manager \nor STIM for short!"
+        
+        what_is_STIM = [
+            "STIM is a companion app for Riot Games' multiplayer online battle arena (MOBA) game League of Legends.",
+            "What this companion app does is it pulls real match data from your most recent match and displays it in a friendly format.",
+            "It displays the most recent 3 games and 3 random games from a pro player, and displays important statistics such as gold and",
+            "experience gain and the gold differential versus your opponent. Our app displays this data and",
+            "also formulates an analysis to provide you tips and advice on how to improve your gameplay."
+        ]
+        
+        how_to_use = [
+            "1. Login using your summoner username\n"
+            "2. Scroll through your user games and pro games independently\n"
+            "3. Comparison between the two displayed games will be displayed in the advice section below the graphs.\n"
+            "4. Invalid summoner names will be rejected and you will be prompted again for a valid summoner name"
+        ]
+        
+        credits = [
+            "Project Leader and Backend: Benjamin Covert\n"
+            "Front End and GUI: David Hutchins\n"
+            "Game Analysis and Distribution: Jaxton Willman"
+        ]
+        
+        ttk.Label(self, text=title, style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=0, sticky=N)
+        
+        ttk.Label(self, text="What is STIM?", style="Title.TLabel", anchor="center", justify="center").grid(column=0, row=1, sticky=N)
+        ttk.Label(self, text=' '.join(what_is_STIM), style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(column=0, row=2, sticky=N)
+        
+        ttk.Label(self, text="How to Use it?", style="Title.TLabel", anchor="center", justify="center").grid(column=1, row=1, sticky=N)
+        ttk.Label(self, text=' '.join(how_to_use), style="Text.TLabel", anchor="center", justify="left", wraplength=300).grid(column=1, row=2, sticky=N)
+        
+        ttk.Label(self, text="Credits", style="Title.TLabel", anchor="center", justify="center").grid(column=2, row=1, sticky=N)
+        ttk.Label(self, text=' '.join(credits), style="Title.TLabel", anchor="center", justify="left", wraplength=300).grid(column=2, row=2, sticky=N)
+        
+        # Load image
+        img_path = "src/STIM_Module/assets/Images/lol_image.jpg"
+        if os.path.exists(img_path):
+            self.img = ImageTk.PhotoImage(Image.open(img_path).resize((500, 250)))
+            ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4, columnspan=3)
 
 
 class SecondaryWindow(ttk.Frame):  # Summoner Name Verification
@@ -241,6 +254,7 @@ class GameDisplayWindow(ttk.Frame):
         ttk.Button(self, text="View Previous User Game", style="My.TButton",
                    command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num - 1) % 3), pro_game_num,
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W))
+        
         # Drawing Pro Games
         ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(
             column=0, row=2, sticky=W)
@@ -253,10 +267,15 @@ class GameDisplayWindow(ttk.Frame):
         ttk.Button(self, text="View Previous Pro Game", style="My.TButton",
                    command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3),
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W))
-        # Place Holder Advice Label
-        advice_string = "Do better forehead."
+        
+        # Display advice and analysis
         ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=3, sticky=(W, N))
-        ttk.Label(self, text="Tip 1: %s" % advice_string, style="Text.TLabel").grid(column=0, row=4, sticky=(W, N))
+        
+        tips = just_the_tips()
+        tip_row_num = 4
+        for tip in tips:
+            ttk.Label(self, text=tip, style="Text.TLabel").grid(column=0, columnspan=4, row=tip_row_num, sticky=(W, N))
+            tip_row_num += 1
 
 
 def main():
@@ -270,5 +289,5 @@ def main():
     root.mainloop()
 
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()

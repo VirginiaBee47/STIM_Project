@@ -29,6 +29,7 @@ dependencies = [
   "numpy",
   "requests",
   "datetime",
+  "twisted",
 ]
 
 [project.optional-dependencies]
