@@ -6,6 +6,29 @@ from itertools import groupby, count
 
 
 
+# Load USER data and PRO data
+
+# Crunch stats on user and pro data
+
+# Tell raw user stats
+
+# Compare user data to pro data
+
+# Tell comparison if needed
+# Like: "You averaged 120 gold per minute less than the pro player"
+
+
+
+
+
+
+
+
+
+
+
+
+
 df = pd.read_csv("data/bEANS47_NA1_4386437748.csv")
 
 # data = {
@@ -156,7 +179,7 @@ exp_tips = [
     "",
 ]
 
-
+# Snarky, Sarcastic, and downright Toxic comments
 lol_tips = [
     "Please stop playing. You might think you're good but you're a bad person.",
     "Stop playing League of Legends. It's not fun.",
