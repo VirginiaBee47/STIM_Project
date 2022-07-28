@@ -225,7 +225,7 @@ class GameDisplayWindow(ttk.Frame):
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         _, sum_level = get_summoner(sum_name.get())
-        recent_game_id = game_ids[user_game_num]
+        # recent_game_id = game_ids[user_game_num]
         ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)),
                   style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx=5)
         ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % 3) + 1)),
@@ -244,7 +244,6 @@ class GameDisplayWindow(ttk.Frame):
         # Drawing Pro Games
         ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(
             column=0, row=2, sticky=W)
-        print("IDS:", pro_game_ids)
         pro_game_thread = AsyncGraphDraw(self, pro_name, pro_game_ids[pro_game_num], row_num=2, is_pro=True)
         pro_game_thread.start()
         ttk.Button(self, text="View Next Pro Game", style="My.TButton",

@@ -103,7 +103,6 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I",
         game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=3)
         add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
         summoner_name_return.append(summoner_name)
-        print("DATA FOR SUMMONER ADDED")
     else:
         print("Error code" + str(response.status_code))
 
@@ -216,7 +215,6 @@ def create_sqlite_db(summoner_name):
     cursor = connection.cursor()
 
     try:
-        print(summoner_name)
         query = f'''CREATE TABLE {"GAMEDATA_" + "".join(summoner_name.split())} 
         (ID INT PRIMARY KEY,
         REGION CHAR(5) NOT NULL,
@@ -246,26 +244,33 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
+    recent_game_ids_useable = [None] * len(recent_game_ids)
+
+    i = 0
+    for val in recent_game_ids:
+        recent_game_ids_useable[i] = val
+        i += 1
+
     pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
 
     # check if games are already present and if they are remove them from needed calls
-    print(recent_game_ids)
-    for game_id in recent_game_ids:
-        match = re.match(pattern, str(game_id))
 
-        db_id = int(match.group(2))
+    query = f'''SELECT ID, REGION FROM {"GAMEDATA_" + "".join(summoner_name.split())};'''
+    cursor.execute(query)
+    existing_ids = cursor.fetchall()
 
-        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ID=?);'''
-        cursor.execute(query, (db_id,))
-        if cursor.fetchone()[0] == 1:
-            print("Game ID: %i\talready exists. Skipping (no API call made)" % db_id)
-            recent_game_ids.remove(game_id)
+    for id_tup in existing_ids:
+        numeric = id_tup[0]
+        region = id_tup[1]
+        try:
+            recent_game_ids_useable.remove(region + "_" + str(numeric))
+        except Exception:
+            pass
 
-    print(recent_game_ids)
     # collect all of the data (in no particular order)
-    data = get_raw_game_data(recent_game_ids)
+    data = get_raw_game_data(recent_game_ids_useable)
 
-    for game_id in recent_game_ids:
+    for game_id in recent_game_ids_useable:
         for api_return in data:
             if api_return[1] == game_id:
                 if api_return[2]:
