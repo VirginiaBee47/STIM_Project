@@ -1,6 +1,8 @@
 # import forehead as you
 import numpy as np
 import pandas as pd
+import sqlite3 as sq
+import ast
 import random
 from itertools import groupby, count
 
@@ -29,7 +31,7 @@ from itertools import groupby, count
 
 
 
-df = pd.read_csv("data/bEANS47_NA1_4386437748.csv")
+#df = pd.read_csv("data/bEANS47_NA1_4386437748.csv")
 
 # data = {
 #   "Minute": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -44,6 +46,41 @@ df = pd.read_csv("data/bEANS47_NA1_4386437748.csv")
 
 # TODO: Compare USER against PRO
 # TODO: Ignore games with -1 values for gold differential stats
+
+
+
+
+def get_data(name, game_id, is_pro=False):
+    
+    name = name[0] if is_pro else name.get()
+    
+    game_id_digits = int(game_id[4:])
+    connection = sq.connect("data/game_data.db")
+    cursor = connection.cursor()
+    
+    # Get Total Gold
+    query = f'SELECT GOLDTL FROM {"GAMEDATA_" + "".join(name.split())} WHERE ID={game_id_digits}'
+    cursor.execute(query)
+    total_gold = ast.literal_eval(str(cursor.fetchone())[2:-3])
+    
+    # Get Total XP
+    query = f'SELECT XPTL FROM {"GAMEDATA_" + "".join(name.split())} WHERE ID={game_id_digits}'
+    cursor.execute(query)
+    total_xp = ast.literal_eval(str(cursor.fetchone())[2:-3])
+    
+    # Get Gold Diff
+    query = f'SELECT GLDDIFTL FROM {"GAMEDATA_" + "".join(name.split())} WHERE ID={game_id_digits}'
+    cursor.execute(query)
+    gold_diff = ast.literal_eval(str(cursor.fetchone())[2:-3])
+    
+    list_of_mins = [i for i in range(len(total_gold))]
+
+    df = pd.DataFrame(list(zip(list_of_mins, total_gold, total_xp, gold_diff)), columns=["Minute", "Total Gold", "Total Exp", "Gold Diff"])
+    
+    return df
+
+
+
 
 # Gold analysis
 def gold_analysis(df): # Pass in raw dataframe
@@ -69,7 +106,6 @@ def gold_analysis(df): # Pass in raw dataframe
     
     return df, avg_gpm, gpm_below_300
 
-
 # XP analysis
 def xp_analysis(df): # Pass in dataframe after gold_analysis is done
     xppm = [0] * len(df)
@@ -83,6 +119,11 @@ def xp_analysis(df): # Pass in dataframe after gold_analysis is done
     
     return df, avg_xppm, xp_below_300
 
+# Combine gold and xp analysis
+def do_analysis(df):
+    df, avg_gpm, gpm_below_300 = gold_analysis(df)
+    df, avg_xppm, xp_below_300 = xp_analysis(df)
+    return df, avg_gpm, gpm_below_300, avg_xppm, xp_below_300
 
 
 
@@ -105,6 +146,7 @@ def display_range(lst):
 
 
 
+# Shitty life tips - get out there and touch some grass
 life_tips = [
     "The best time to plant a tree was 20 years ago. The second best time is now.",
     "If you don't know where you are, you might as well be lost.",
@@ -199,12 +241,15 @@ lol_tips = [
 ]
 
 
-def just_the_tips(df):
+def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
     # Do data processing
     dev_print = False
     
-    df, avg_gpm, gpm_below_300 = gold_analysis(df)
-    df, avg_xppm, xp_below_300 = xp_analysis(df)
+    sum_df = get_data(sum_name, sum_game_id)
+    pro_df = get_data(pro_name, pro_game_id, is_pro=True)
+    
+    df, avg_gpm, gpm_below_300, avg_xppm, xp_below_300 = do_analysis(sum_df)
+    
     
     
     if dev_print:
@@ -257,6 +302,6 @@ def just_the_tips(df):
 
 
 
-print(*just_the_tips(df), sep = "\n")
+#print(*just_the_tips(df), sep = "\n")
 
 

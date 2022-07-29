@@ -241,12 +241,12 @@ class GameDisplayWindow(ttk.Frame):
         recent_game_id = game_ids[user_game_num]
         ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)),
                   style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx=5)
-        ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % 3) + 1)),
-                  style="Title.TLabel").grid(column=0, row=1, sticky=W)
+        
+        # Drawing User Games
+        ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % 3) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
         user_game_thread = AsyncGraphDraw(self, sum_name, game_ids[user_game_num], row_num=1)
         user_game_thread.start()
-        self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton",
-                                        command=lambda: popUp(self.switch_button, master))
+        self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton", command=lambda: popUp(self.switch_button, master))
         self.switch_button.grid(column=0, row=1, sticky=(N, W))
         ttk.Button(self, text="View Next User Game", style="My.TButton",
                    command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num + 1) % 3), pro_game_num,
@@ -256,8 +256,7 @@ class GameDisplayWindow(ttk.Frame):
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W))
         
         # Drawing Pro Games
-        ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(
-            column=0, row=2, sticky=W)
+        ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
         print("IDS:", pro_game_ids)
         pro_game_thread = AsyncGraphDraw(self, pro_name, pro_game_ids[pro_game_num], row_num=2, is_pro=True)
         pro_game_thread.start()
@@ -268,11 +267,14 @@ class GameDisplayWindow(ttk.Frame):
                    command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3),
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W))
         
-        # Display advice and analysis
-        ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=3, sticky=(W, N))
         
-        tips = just_the_tips()
-        tip_row_num = 4
+        # Display advice and analysis
+        ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=4, sticky=(W, N))
+        
+        summoner_stuff = sum_name, user_game_num, pro_game_num, game_ids, pro_name, pro_game_ids
+        
+        tips = just_the_tips(sum_name, game_ids[user_game_num], pro_name, pro_game_ids[pro_game_num])
+        tip_row_num = 5
         for tip in tips:
             ttk.Label(self, text=tip, style="Text.TLabel").grid(column=0, columnspan=4, row=tip_row_num, sticky=(W, N))
             tip_row_num += 1

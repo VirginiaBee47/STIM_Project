@@ -1,9 +1,9 @@
 import pandas as pd
+import numpy as np
 import sqlite3 as sq
 import ast
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
 
 # TODO: Turn these two functions into one just using filename now that it is returned to us
 
