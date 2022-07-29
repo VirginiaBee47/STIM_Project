@@ -17,6 +17,7 @@ QUEUE = []
 
 
 def respect_rate_limit(url):
+    print(f'call made: {str(url)[:-51]}')
     response = rq.get(url)
     pattern = re.compile(r'(\d+):1,(\d+):120')
     for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
@@ -115,7 +116,6 @@ def get_recent_game_ids(puuid, num_games=1):
         return json.loads(json.dumps(response.json()))
     else:
         raise APICallResponseException(response.status_code)
-        return []
 
 
 def get_opponent_puuid(raw_game_data, user_puuid):
@@ -191,6 +191,56 @@ def get_general_summoner_stats(raw_game_data, puuid):
     victory = raw_game_data['info']['participants'][summoner_index]['win']
 
     return champion, position, victory
+
+
+def get_summoner_scores(raw_game_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    creep_score = raw_game_data['info']['participants'][summoner_index]['totalMinionsKilled']
+    cc_score = raw_game_data['info']['participants'][summoner_index]['timeCCingOthers']
+    vision_score = raw_game_data['info']['participants'][summoner_index]['visionScore']
+
+    return creep_score, cc_score, vision_score
+
+
+def get_summoner_kda_stats(raw_game_data, raw_game_timeline_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    kills = raw_game_data['info']['participants'][summoner_index]['kills']
+    deaths = raw_game_data['info']['participants'][summoner_index]['deaths']
+    assists = raw_game_data['info']['participants'][summoner_index]['assists']
+
+    kill_timestamps = []
+    death_timestamps = []
+    assist_timestamps = []
+
+    for i in range(len(list(raw_game_timeline_data['info']['frames']))):
+        events_this_min = list(raw_game_timeline_data['info']['frames'][i]['events'])
+
+        kills_this_min = []
+        deaths_this_min = []
+        assists_this_min = []
+        default_value = [-1]
+
+        for j in range(len(events_this_min)):
+            if dict(events_this_min[j])['type'] == "CHAMPION_KILL":
+                if int(dict(events_this_min[j])["killerId"]) == summoner_index + 1:
+                    kills_this_min.append(dict(events_this_min[j]))
+                elif int(dict(events_this_min[j])["victimId"]) == summoner_index + 1:
+                    deaths_this_min.append(dict(events_this_min[j]))
+                else:
+                    assist_ids_this_kill = dict(events_this_min[j]).get('assistingParticipantIds', default_value)
+                    if int(summoner_index + 1) in list(assist_ids_this_kill):
+                        assists_this_min.append(dict(events_this_min[j]))
+
+        for event in kills_this_min:
+            kill_timestamps.append(event['timestamp'])
+        for event in deaths_this_min:
+            death_timestamps.append(event['timestamp'])
+        for event in assists_this_min:
+            assist_timestamps.append(event['timestamp'])
+
+    return kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps
 
 
 def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponent_puuid=None):
@@ -304,7 +354,7 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     connection.close()
 
 
-def filter_games(summoner_name, filter_attr, filter_val):
+def filter_games(summoner_name, filter_attr=None, filter_val=None):
     filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
     champions = ['Aatrox', 'Ahri', 'Akali', 'Alistar', 'Amumu', 'Anivia', 'Annie', 'Ashe', 'AurelionSol', 'Azir',
                  'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia', 'Chogath', 'Corki',
@@ -320,21 +370,28 @@ def filter_games(summoner_name, filter_attr, filter_val):
                  'Thresh', 'Tristana', 'Trundle', 'Tryndamere', 'TwistedFate', 'Twitch', 'Udyr', 'Urgot', 'Varus',
                  'Vayne', 'Veigar', 'Velkoz', 'Vi', 'Viktor', 'Vladimir', 'Volibear', 'Warwick', 'Xerath', 'XinZhao',
                  'Yasuo', 'Yorick', 'Zac', 'Zed', 'Ziggs', 'Zilean', 'Zyra']
-    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
-    game_modes = ['CLASSIC', 'ARAM']
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+    game_modes = ['CLASSIC', 'ARAM', 'ULTBOOK']
     game_maps = []
 
+    connection = sqlite3.connect("data/game_data.db")
+    cursor = connection.cursor()
+
     if filter_attr not in filter_attributes:
+        if filter_attr is None and filter_val is None:
+            cursor.execute(f'SELECT REGION, ID, VICTORY FROM {"GAMEDATA_" + "".join(summoner_name.split())}')
+            return cursor.fetchall()
         raise InvalidParamException("filter_attr")
     elif filter_attr == 'CHAMPION_PLAYED' and filter_val not in champions:
         raise InvalidParamException("filter_val", "Champion not implemented yet")
     elif filter_attr == 'VICTORY':
-        try:
-            if bool(filter_val):
-                filter_val = 1
-            else:
-                filter_val = 0
-        except Exception:
+        if filter_val is True:
+            filter_val = 1
+        elif filter_val is False:
+            filter_val = 0
+        elif filter_val == 0 or filter_val == 1:
+            filter_val = filter_val
+        else:
             raise InvalidParamException("filter_val", "Value could not be converted to boolean")
     elif filter_attr == 'POSITION_PLAYED' and filter_val not in positions:
         raise InvalidParamException("filter_val", "Position does not exist")
@@ -351,13 +408,9 @@ def filter_games(summoner_name, filter_attr, filter_val):
     elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
         raise InvalidParamException("filter_val", "Invalid game map")
 
-    connection = sqlite3.connect("data/game_data.db")
-    cursor = connection.cursor()
+    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE {filter_attr}={filter_val}'
 
-    params = (filter_attr, filter_val)
-    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ?=?'
-
-    cursor.execute(query, params)
+    cursor.execute(query)
     entries = cursor.fetchall()
     return entries
 
