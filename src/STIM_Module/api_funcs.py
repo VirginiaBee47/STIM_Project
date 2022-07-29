@@ -12,7 +12,6 @@ import requests as rq
 from STIM_Module.API_KEY import API_KEY
 from STIM_Module.new_exceptions import *
 
-
 QUEUE = []
 
 
@@ -273,6 +272,15 @@ def create_sqlite_db(summoner_name):
         POSITION_PLAYED CHAR(7),
         GAMEMODE CHAR(7),
         ENDED_IN_SURRENDER INTEGER,
+        CC_SCORE INTEGER,
+        VISION_SCORE INTEGER,
+        CREEP_SCORE INTEGER,
+        KILLS INTEGER,
+        DEATHS INTEGER,
+        ASSISTS INTEGER,
+        KILLTL CHAR(300),
+        DEATHTL CHAR(300),
+        ASSISTTL CHAR(300),
         GOLDTL CHAR(300) NOT NULL,
         XPTL CHAR(300) NOT NULL,
         GLDDIFTL CHAR(300) NOT NULL);'''
@@ -339,14 +347,20 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
         xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
         gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
 
-        params = [db_id, region_id, victory, champ, position, gamemode, surrender,
-                     gold_timeline, xp_timeline,gold_diff_timeline]
+        creep_score, cc_score, vision_score = get_summoner_scores(raw_game_data, summoner_puuid)
+        kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps = get_summoner_kda_stats(
+            raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+        params = [db_id, region_id, victory, champ, position, gamemode, surrender, cc_score, vision_score, creep_score,
+                  kills, deaths, assists, str(kill_timestamps), str(death_timestamps), str(assist_timestamps),
+                  gold_timeline, xp_timeline, gold_diff_timeline]
 
         try:
             query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
-                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
+                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,CC_SCORE,
+                        VISION_SCORE,CREEP_SCORE,KILLS,DEATHS,ASSISTS,KILLTL,DEATHTL,ASSISTTL,GOLDTL,XPTL,GLDDIFTL) 
                         VALUES
-                        (?,?,?,?,?,?,?,?,?,?)'''
+                        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
             cursor.execute(query, params)
         except sqlite3.IntegrityError as e:
             print(e, ": Skipping entry and continuing", sep="")
@@ -408,11 +422,14 @@ def filter_games(summoner_name, filter_attr=None, filter_val=None):
     elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
         raise InvalidParamException("filter_val", "Invalid game map")
 
+    if type(filter_val) == str:
+        filter_val = '\"' + filter_val + '\"'
+
     query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE {filter_attr}={filter_val}'
 
     cursor.execute(query)
     entries = cursor.fetchall()
-    return entries
+    return [entry[0] for entry in entries]
 
 
 # The below functions are old/unused and may break things
@@ -522,7 +539,8 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
 
             data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
-                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
+                         'game_time': str(game_datetime), 'game_map': game_map,
+                         'ended_in_surrender': ended_in_surrender}
 
             json.dump(data_dict, outfile)
 
