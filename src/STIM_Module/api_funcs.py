@@ -260,7 +260,7 @@ def create_sqlite_db(summoner_name):
     if not os.path.exists("./data"):
         os.makedirs("./data")
 
-    connection = sqlite3.connect("data/game_data.db")
+    connection = sqlite3.connect("./data/game_data.db")
     cursor = connection.cursor()
 
     try:

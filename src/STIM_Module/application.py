@@ -283,7 +283,7 @@ class GameDisplayWindow(ttk.Frame):
 
 def main():
     root = tk.Tk()
-    root.geometry("1080x800")
+    root.geometry("1200x900")
     root.config(bg="#808c9f")
     root.title("Statistics Tracker and Improvement Manager")
     styles_init()
