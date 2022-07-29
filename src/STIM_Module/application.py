@@ -228,51 +228,52 @@ class SecondaryWindow(ttk.Frame):  # Summoner Name Verification
         cursor.execute(query)
         numeric_ids = [ID[0] for ID in cursor.fetchall()]
         pro_game_ids = ['NA1_' + str(ID) for ID in numeric_ids]
-
+        print("LOOK HERE:::::::", recent_game_ids)
+        print("NUMERIC IDS::::::::", numeric_ids)
         GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_name, pro_game_ids=pro_game_ids)
 
 
 class GameDisplayWindow(ttk.Frame):
     def __init__(self, master, parent, sum_name, user_game_num, pro_game_num, game_ids, pro_name, pro_game_ids):
+        number_user_games = len(game_ids)
+        number_pro_games = len(pro_game_ids)
         parent.pack_forget()
         ttk.Frame.__init__(self, master, style="My.TFrame")
         self.pack()
         _, sum_level = get_summoner(sum_name.get())
-        recent_game_id = game_ids[user_game_num]
+        #recent_game_id = game_ids[user_game_num]
         ttk.Label(self, text="Summoner Name: %s\nSummoner Level: %s" % (sum_name.get(), str(sum_level)),
                   style="Title.TLabel").grid(column=0, row=0, sticky=(W, N), padx=5)
         
         # Drawing User Games
-        ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % 3) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
+        ttk.Label(self, text="%s's Stats For \nGame %s" % (sum_name.get(), ((user_game_num % number_user_games) + 1)), style="Title.TLabel").grid(column=0, row=1, sticky=W)
         user_game_thread = AsyncGraphDraw(self, sum_name, game_ids[user_game_num], row_num=1)
         user_game_thread.start()
         self.switch_button = ttk.Button(self, text="Switch Accounts", style="My.TButton", command=lambda: popUp(self.switch_button, master))
         self.switch_button.grid(column=0, row=1, sticky=(N, W))
         ttk.Button(self, text="View Next User Game", style="My.TButton",
-                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num + 1) % 3), pro_game_num,
+                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num + 1) % number_user_games), pro_game_num,
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W), pady=25)
         ttk.Button(self, text="View Previous User Game", style="My.TButton",
-                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num - 1) % 3), pro_game_num,
+                   command=lambda: GameDisplayWindow(master, self, sum_name, ((user_game_num - 1) % number_user_games), pro_game_num,
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=1, sticky=(S, W))
         
         # Drawing Pro Games
-        ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % 3) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
+        ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % number_pro_games) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
         print("IDS:", pro_game_ids)
         pro_game_thread = AsyncGraphDraw(self, pro_name, pro_game_ids[pro_game_num], row_num=2, is_pro=True)
         pro_game_thread.start()
         ttk.Button(self, text="View Next Pro Game", style="My.TButton",
-                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % 3),
+                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num + 1) % number_pro_games),
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W), pady=25)
         ttk.Button(self, text="View Previous Pro Game", style="My.TButton",
-                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % 3),
+                   command=lambda: GameDisplayWindow(master, self, sum_name, user_game_num, ((pro_game_num - 1) % number_pro_games),
                                                      game_ids, pro_name, pro_game_ids)).grid(column=0, row=2, sticky=(S, W))
         
         
         # Display advice and analysis
         ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=4, sticky=(W, N))
-        
-        summoner_stuff = sum_name, user_game_num, pro_game_num, game_ids, pro_name, pro_game_ids
-        
+                
         tips = just_the_tips(sum_name, game_ids[user_game_num], pro_name, pro_game_ids[pro_game_num])
         tip_row_num = 5
         for tip in tips:
@@ -282,7 +283,7 @@ class GameDisplayWindow(ttk.Frame):
 
 def main():
     root = tk.Tk()
-    root.geometry("1080x720")
+    root.geometry("1080x800")
     root.config(bg="#808c9f")
     root.title("Statistics Tracker and Improvement Manager")
     styles_init()

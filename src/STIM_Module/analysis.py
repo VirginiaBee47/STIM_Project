@@ -243,38 +243,56 @@ lol_tips = [
 
 def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
     # Do data processing
-    dev_print = False
-    
     sum_df = get_data(sum_name, sum_game_id)
     pro_df = get_data(pro_name, pro_game_id, is_pro=True)
     
-    df, avg_gpm, gpm_below_300, avg_xppm, xp_below_300 = do_analysis(sum_df)
+    sum_df, avg_gpm, gpm_below_300, avg_xppm, xp_below_300 = do_analysis(sum_df)
+    pro_df, pro_avg_gpm, pro_gpm_below_300, pro_avg_xppm, pro_xp_below_300 = do_analysis(pro_df)
     
+    print(sum_df)
     
+    # Check type of game
+    if sum_df.loc[0, 'Gold Diff'] == -1:
+        game_type = "ARAM"
+    else:
+        game_type = "NORMAL"
     
-    if dev_print:
-        print(df)
-        print(gpm_below_300)
-        print(xp_below_300)
-        print("\nEND DEV\n")
+    print(game_type)
+    
+    avg_gpm_diff = abs(avg_gpm - pro_avg_gpm)
+    avg_xppm_diff = abs(avg_xppm - pro_avg_xppm)
+    
     
     tips = []
     
-    tips.append("For this game, you averaged around {:d} gold and {:d} xp per minute\n".format(avg_gpm, avg_xppm))
+    # Print pro difference info
+    tips.append("For this {:s} game, you averaged {:d} gold and {:d} xp per minute.".format(game_type, avg_gpm, avg_xppm))
+    tips.append("You had a difference of {:d} gold and {:d} xp per minute.".format(avg_gpm_diff, avg_xppm_diff))
     
+    if (avg_gpm_diff < 20) and (avg_xppm_diff < 20):
+        tips.append("You were close to the pro player's average gold and xp per minute!")
+    elif (avg_gpm_diff < 20) and (avg_xppm_diff > 20):
+        tips.append("You were close to the pro player's average gold per minute but far from their average xp!")
+    elif (avg_gpm_diff > 20) and (avg_xppm_diff < 20):
+        tips.append("You were close to the pro player's average xp per minute but far from their average gpm!")
+    
+    if game_type != "ARAM" and sum_df['Gold Diff'].mean() > 2000:
+        tips.append("But your oppenent across from you in the game had a serious gold advantage over you with a difference over 2000!")
+    
+
     # Print gold info
     if len(gpm_below_300) > 0:
-        tips.append("You were below 300 gold per minute during these minutes: " + str(display_range(gpm_below_300)))
-        tips.append("The silver tier is generally around 351 gpm.")
+        tips.append("\nYou were below 300 gold per minute during these minutes: " + str(display_range(gpm_below_300)))
+        tips.append("The silver tier is generally around 351 gpm. Do your best!")
     else:
-        tips.append("Hey! Your GPM is above 300! You should be proud of yourself!")
+        tips.append("\nHey! Your GPM is above 300 across the board! You farmed well!")
     
     # Print xp info
     if len(xp_below_300) > 0:
         tips.append("You were below 300 XP per minute during these minutes: " + str(display_range(xp_below_300)))
-        tips.append("You should try to improve your XP per minute by playing more games.")
+        tips.append("You should try to farm more and level.")
     else:
-        tips.append("Hey! Your XP per minute is above 300! You should be proud of yourself!")
+        tips.append("Hey! Your XP per minute is above 300 across the board! You leveled quickly!")
     
     
     # Print tips
