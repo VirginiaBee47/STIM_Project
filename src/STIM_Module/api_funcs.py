@@ -16,7 +16,7 @@ QUEUE = []
 
 
 def respect_rate_limit(url):
-    print(f'call made: {str(url)[:-51]}')
+    # print(f'call made: {str(url)[:-51]}')
     response = rq.get(url)
     pattern = re.compile(r'(\d+):1,(\d+):120')
     for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
@@ -100,8 +100,8 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I",
         data = response.json()  # this is a list of summoners in the given queue, tier, and division
         summoner_name = data[7]['summonerName']
         create_sqlite_db(summoner_name)  # Creates a table in the database
-        game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=3)
-        add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
+        game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=20)
+        add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids, is_pro=True)
         summoner_name_return.append(summoner_name)
     else:
         print("Error code" + str(response.status_code))
@@ -292,7 +292,7 @@ def create_sqlite_db(summoner_name):
     connection.close()
 
 
-def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None):
+def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_ids=None, is_pro=False):
     connection = sqlite3.connect("data/game_data.db")
     cursor = connection.cursor()
 
@@ -317,54 +317,70 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     cursor.execute(query)
     existing_ids = cursor.fetchall()
 
+    added_games = 0
+
     for id_tup in existing_ids:
         numeric = id_tup[0]
         region = id_tup[1]
         try:
             recent_game_ids_useable.remove(region + "_" + str(numeric))
+            added_games += 1
         except Exception:
             pass
 
-    # collect all of the data (in no particular order)
-    data = get_raw_game_data(recent_game_ids_useable)
+    loop_index = 0
 
-    for game_id in recent_game_ids_useable:
-        for api_return in data:
-            if api_return[1] == game_id:
-                if api_return[2]:
-                    raw_game_timeline_data = api_return[0]
-                else:
-                    raw_game_data = api_return[0]
+    print(f'games already in db for {summoner_name}: {added_games}')
+    while added_games < num_games:
+        # collect all of the data (in no particular order)
+        games_of_focus = recent_game_ids_useable[num_games * loop_index:num_games * (loop_index+1)]
+        data = get_raw_game_data(games_of_focus)
 
-        match = re.match(pattern, str(game_id))
+        for game_id in games_of_focus:
+            for api_return in data:
+                if api_return[1] == game_id:
+                    if api_return[2]:
+                        raw_game_timeline_data = api_return[0]
+                    else:
+                        raw_game_data = api_return[0]
 
-        db_id = int(match.group(2))
-        region_id = match.group(1)
+            game_len = len(list(raw_game_timeline_data['info']['frames']))
 
-        champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
-        gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
-        gold_timeline = str(get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2])
-        xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
-        gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
+            if game_len <= 10 and is_pro:
+                print("game skipped because too short")
+            else:
+                match = re.match(pattern, str(game_id))
 
-        creep_score, cc_score, vision_score = get_summoner_scores(raw_game_data, summoner_puuid)
-        kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps = get_summoner_kda_stats(
-            raw_game_data, raw_game_timeline_data, summoner_puuid)
+                db_id = int(match.group(2))
+                region_id = match.group(1)
 
-        params = [db_id, region_id, victory, champ, position, gamemode, surrender, cc_score, vision_score, creep_score,
-                  kills, deaths, assists, str(kill_timestamps), str(death_timestamps), str(assist_timestamps),
-                  gold_timeline, xp_timeline, gold_diff_timeline]
+                champ, position, victory = get_general_summoner_stats(raw_game_data, summoner_puuid)
+                gamemode, gamemap, datetime, surrender = get_game_stats(raw_game_data)
+                gold_timeline = str(get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[2])
+                xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
+                gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
 
-        try:
-            query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
-                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,CC_SCORE,
-                        VISION_SCORE,CREEP_SCORE,KILLS,DEATHS,ASSISTS,KILLTL,DEATHTL,ASSISTTL,GOLDTL,XPTL,GLDDIFTL) 
-                        VALUES
-                        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
-            cursor.execute(query, params)
-        except sqlite3.IntegrityError as e:
-            print(e, ": Skipping entry and continuing", sep="")
-        connection.commit()
+                creep_score, cc_score, vision_score = get_summoner_scores(raw_game_data, summoner_puuid)
+                kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps = get_summoner_kda_stats(
+                    raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+                params = [db_id, region_id, victory, champ, position, gamemode, surrender, cc_score, vision_score,
+                          creep_score,
+                          kills, deaths, assists, str(kill_timestamps), str(death_timestamps), str(assist_timestamps),
+                          gold_timeline, xp_timeline, gold_diff_timeline]
+
+                try:
+                    query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
+                                            (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,CC_SCORE,
+                                            VISION_SCORE,CREEP_SCORE,KILLS,DEATHS,ASSISTS,KILLTL,DEATHTL,ASSISTTL,GOLDTL,XPTL,GLDDIFTL) 
+                                            VALUES
+                                            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
+                    cursor.execute(query, params)
+                    added_games += 1
+                except sqlite3.IntegrityError as e:
+                    print(e, ": Skipping entry and continuing", sep="")
+                connection.commit()
+            loop_index += 1
     connection.close()
 
 
