@@ -12,11 +12,11 @@ import requests as rq
 from STIM_Module.API_KEY import API_KEY
 from STIM_Module.new_exceptions import *
 
-
 QUEUE = []
 
 
 def respect_rate_limit(url):
+    print(f'call made: {str(url)[:-51]}')
     response = rq.get(url)
     pattern = re.compile(r'(\d+):1,(\d+):120')
     for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
@@ -103,7 +103,6 @@ def collect_data_for_rank(queue="RANKED_SOLO_5x5", tier="DIAMOND", division="I",
         game_ids = get_recent_game_ids(get_summoner(summoner_name)[0], num_games=3)
         add_data_to_db(summoner_name, num_games=3, recent_game_ids=game_ids)
         summoner_name_return.append(summoner_name)
-        print("DATA FOR SUMMONER ADDED")
     else:
         print("Error code" + str(response.status_code))
 
@@ -116,7 +115,6 @@ def get_recent_game_ids(puuid, num_games=1):
         return json.loads(json.dumps(response.json()))
     else:
         raise APICallResponseException(response.status_code)
-        return []
 
 
 def get_opponent_puuid(raw_game_data, user_puuid):
@@ -194,6 +192,56 @@ def get_general_summoner_stats(raw_game_data, puuid):
     return champion, position, victory
 
 
+def get_summoner_scores(raw_game_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    creep_score = raw_game_data['info']['participants'][summoner_index]['totalMinionsKilled']
+    cc_score = raw_game_data['info']['participants'][summoner_index]['timeCCingOthers']
+    vision_score = raw_game_data['info']['participants'][summoner_index]['visionScore']
+
+    return creep_score, cc_score, vision_score
+
+
+def get_summoner_kda_stats(raw_game_data, raw_game_timeline_data, puuid):
+    summoner_index = raw_game_data['metadata']['participants'].index(puuid)
+
+    kills = raw_game_data['info']['participants'][summoner_index]['kills']
+    deaths = raw_game_data['info']['participants'][summoner_index]['deaths']
+    assists = raw_game_data['info']['participants'][summoner_index]['assists']
+
+    kill_timestamps = []
+    death_timestamps = []
+    assist_timestamps = []
+
+    for i in range(len(list(raw_game_timeline_data['info']['frames']))):
+        events_this_min = list(raw_game_timeline_data['info']['frames'][i]['events'])
+
+        kills_this_min = []
+        deaths_this_min = []
+        assists_this_min = []
+        default_value = [-1]
+
+        for j in range(len(events_this_min)):
+            if dict(events_this_min[j])['type'] == "CHAMPION_KILL":
+                if int(dict(events_this_min[j])["killerId"]) == summoner_index + 1:
+                    kills_this_min.append(dict(events_this_min[j]))
+                elif int(dict(events_this_min[j])["victimId"]) == summoner_index + 1:
+                    deaths_this_min.append(dict(events_this_min[j]))
+                else:
+                    assist_ids_this_kill = dict(events_this_min[j]).get('assistingParticipantIds', default_value)
+                    if int(summoner_index + 1) in list(assist_ids_this_kill):
+                        assists_this_min.append(dict(events_this_min[j]))
+
+        for event in kills_this_min:
+            kill_timestamps.append(event['timestamp'])
+        for event in deaths_this_min:
+            death_timestamps.append(event['timestamp'])
+        for event in assists_this_min:
+            assist_timestamps.append(event['timestamp'])
+
+    return kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps
+
+
 def get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, puuid, opponent_puuid=None):
     user_gold_timeline = get_summoner_gold_stats(raw_game_data, raw_game_timeline_data, puuid)[2]
     if opponent_puuid is None:
@@ -216,7 +264,6 @@ def create_sqlite_db(summoner_name):
     cursor = connection.cursor()
 
     try:
-        print(summoner_name)
         query = f'''CREATE TABLE {"GAMEDATA_" + "".join(summoner_name.split())} 
         (ID INT PRIMARY KEY,
         REGION CHAR(5) NOT NULL,
@@ -225,6 +272,15 @@ def create_sqlite_db(summoner_name):
         POSITION_PLAYED CHAR(7),
         GAMEMODE CHAR(7),
         ENDED_IN_SURRENDER INTEGER,
+        CC_SCORE INTEGER,
+        VISION_SCORE INTEGER,
+        CREEP_SCORE INTEGER,
+        KILLS INTEGER,
+        DEATHS INTEGER,
+        ASSISTS INTEGER,
+        KILLTL CHAR(300),
+        DEATHTL CHAR(300),
+        ASSISTTL CHAR(300),
         GOLDTL CHAR(300) NOT NULL,
         XPTL CHAR(300) NOT NULL,
         GLDDIFTL CHAR(300) NOT NULL);'''
@@ -246,26 +302,33 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     if recent_game_ids is None:
         recent_game_ids = get_recent_game_ids(summoner_puuid, num_games)
 
+    recent_game_ids_useable = [None] * len(recent_game_ids)
+
+    i = 0
+    for val in recent_game_ids:
+        recent_game_ids_useable[i] = val
+        i += 1
+
     pattern = re.compile(r'([A-Z]{2}1)_(\d{10})')
 
     # check if games are already present and if they are remove them from needed calls
-    print(recent_game_ids)
-    for game_id in recent_game_ids:
-        match = re.match(pattern, str(game_id))
 
-        db_id = int(match.group(2))
+    query = f'''SELECT ID, REGION FROM {"GAMEDATA_" + "".join(summoner_name.split())};'''
+    cursor.execute(query)
+    existing_ids = cursor.fetchall()
 
-        query = f'''SELECT EXISTS(SELECT * FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ID=?);'''
-        cursor.execute(query, (db_id,))
-        if cursor.fetchone()[0] == 1:
-            print("Game ID: %i\talready exists. Skipping (no API call made)" % db_id)
-            recent_game_ids.remove(game_id)
+    for id_tup in existing_ids:
+        numeric = id_tup[0]
+        region = id_tup[1]
+        try:
+            recent_game_ids_useable.remove(region + "_" + str(numeric))
+        except Exception:
+            pass
 
-    print(recent_game_ids)
     # collect all of the data (in no particular order)
-    data = get_raw_game_data(recent_game_ids)
+    data = get_raw_game_data(recent_game_ids_useable)
 
-    for game_id in recent_game_ids:
+    for game_id in recent_game_ids_useable:
         for api_return in data:
             if api_return[1] == game_id:
                 if api_return[2]:
@@ -284,14 +347,20 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
         xp_timeline = str(get_summoner_exp_stats(raw_game_data, raw_game_timeline_data, summoner_puuid)[1])
         gold_diff_timeline = str(get_gold_diff_timeline(raw_game_data, raw_game_timeline_data, summoner_puuid))
 
-        params = [db_id, region_id, victory, champ, position, gamemode, surrender,
-                     gold_timeline, xp_timeline,gold_diff_timeline]
+        creep_score, cc_score, vision_score = get_summoner_scores(raw_game_data, summoner_puuid)
+        kills, deaths, assists, kill_timestamps, death_timestamps, assist_timestamps = get_summoner_kda_stats(
+            raw_game_data, raw_game_timeline_data, summoner_puuid)
+
+        params = [db_id, region_id, victory, champ, position, gamemode, surrender, cc_score, vision_score, creep_score,
+                  kills, deaths, assists, str(kill_timestamps), str(death_timestamps), str(assist_timestamps),
+                  gold_timeline, xp_timeline, gold_diff_timeline]
 
         try:
             query = f'''INSERT INTO {"GAMEDATA_" + "".join(summoner_name.split())} 
-                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,GOLDTL,XPTL,GLDDIFTL) 
+                        (ID,REGION,VICTORY,CHAMPION_PLAYED,POSITION_PLAYED,GAMEMODE,ENDED_IN_SURRENDER,CC_SCORE,
+                        VISION_SCORE,CREEP_SCORE,KILLS,DEATHS,ASSISTS,KILLTL,DEATHTL,ASSISTTL,GOLDTL,XPTL,GLDDIFTL) 
                         VALUES
-                        (?,?,?,?,?,?,?,?,?,?)'''
+                        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
             cursor.execute(query, params)
         except sqlite3.IntegrityError as e:
             print(e, ": Skipping entry and continuing", sep="")
@@ -299,7 +368,7 @@ def add_data_to_db(summoner_name, summoner_puuid=None, num_games=3, recent_game_
     connection.close()
 
 
-def filter_games(summoner_name, filter_attr, filter_val):
+def filter_games(summoner_name, filter_attr=None, filter_val=None):
     filter_attributes = ["VICTORY", "CHAMPION_PLAYED", "POSITION_PLAYED", "GAMEMODE", "ENDED_IN_SURRENDER"]
     champions = ['Aatrox', 'Ahri', 'Akali', 'Alistar', 'Amumu', 'Anivia', 'Annie', 'Ashe', 'AurelionSol', 'Azir',
                  'Bard', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia', 'Chogath', 'Corki',
@@ -315,21 +384,28 @@ def filter_games(summoner_name, filter_attr, filter_val):
                  'Thresh', 'Tristana', 'Trundle', 'Tryndamere', 'TwistedFate', 'Twitch', 'Udyr', 'Urgot', 'Varus',
                  'Vayne', 'Veigar', 'Velkoz', 'Vi', 'Viktor', 'Vladimir', 'Volibear', 'Warwick', 'Xerath', 'XinZhao',
                  'Yasuo', 'Yorick', 'Zac', 'Zed', 'Ziggs', 'Zilean', 'Zyra']
-    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT']
-    game_modes = ['CLASSIC', 'ARAM']
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+    game_modes = ['CLASSIC', 'ARAM', 'ULTBOOK']
     game_maps = []
 
+    connection = sqlite3.connect("data/game_data.db")
+    cursor = connection.cursor()
+
     if filter_attr not in filter_attributes:
+        if filter_attr is None and filter_val is None:
+            cursor.execute(f'SELECT REGION, ID, VICTORY FROM {"GAMEDATA_" + "".join(summoner_name.split())}')
+            return cursor.fetchall()
         raise InvalidParamException("filter_attr")
     elif filter_attr == 'CHAMPION_PLAYED' and filter_val not in champions:
         raise InvalidParamException("filter_val", "Champion not implemented yet")
     elif filter_attr == 'VICTORY':
-        try:
-            if bool(filter_val):
-                filter_val = 1
-            else:
-                filter_val = 0
-        except Exception:
+        if filter_val is True:
+            filter_val = 1
+        elif filter_val is False:
+            filter_val = 0
+        elif filter_val == 0 or filter_val == 1:
+            filter_val = filter_val
+        else:
             raise InvalidParamException("filter_val", "Value could not be converted to boolean")
     elif filter_attr == 'POSITION_PLAYED' and filter_val not in positions:
         raise InvalidParamException("filter_val", "Position does not exist")
@@ -346,15 +422,14 @@ def filter_games(summoner_name, filter_attr, filter_val):
     elif filter_attr == 'GAME_MAP' and filter_val not in game_maps:
         raise InvalidParamException("filter_val", "Invalid game map")
 
-    connection = sqlite3.connect("data/game_data.db")
-    cursor = connection.cursor()
+    if type(filter_val) == str:
+        filter_val = '\"' + filter_val + '\"'
 
-    params = (filter_attr, filter_val)
-    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE ?=?'
+    query = f'SELECT ID FROM {"GAMEDATA_" + "".join(summoner_name.split())} WHERE {filter_attr}={filter_val}'
 
-    cursor.execute(query, params)
+    cursor.execute(query)
     entries = cursor.fetchall()
-    return entries
+    return [entry[0] for entry in entries]
 
 
 # The below functions are old/unused and may break things
@@ -464,7 +539,8 @@ def make_game_csv(summoner_name, summoner_puuid=None, num_games=3, recent_game_i
             game_mode, game_map, game_datetime, ended_in_surrender = get_game_stats(raw_game_data)
 
             data_dict = {'victory': victory, 'position': position, 'champion': champ, 'game_mode': game_mode,
-                         'game_time': str(game_datetime), 'game_map': game_map, 'ended_in_surrender': ended_in_surrender}
+                         'game_time': str(game_datetime), 'game_map': game_map,
+                         'ended_in_surrender': ended_in_surrender}
 
             json.dump(data_dict, outfile)
 
