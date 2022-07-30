@@ -228,8 +228,8 @@ class SecondaryWindow(ttk.Frame):  # Summoner Name Verification
         cursor.execute(query)
         numeric_ids = [ID[0] for ID in cursor.fetchall()]
         pro_game_ids = ['NA1_' + str(ID) for ID in numeric_ids]
-        print("LOOK HERE:::::::", recent_game_ids)
-        print("NUMERIC IDS::::::::", numeric_ids)
+        # print("LOOK HERE:::::::", recent_game_ids)
+        # print("NUMERIC IDS::::::::", numeric_ids)
         GameDisplayWindow(master, self, sum_name, 0, 0, recent_game_ids, pro_name, pro_game_ids=pro_game_ids)
 
 
@@ -260,7 +260,7 @@ class GameDisplayWindow(ttk.Frame):
         
         # Drawing Pro Games
         ttk.Label(self, text="Pro's Stats For \nGame %d" % ((pro_game_num % number_pro_games) + 1), style="Title.TLabel").grid(column=0, row=2, sticky=W)
-        print("IDS:", pro_game_ids)
+        # print("IDS:", pro_game_ids)
         pro_game_thread = AsyncGraphDraw(self, pro_name, pro_game_ids[pro_game_num], row_num=2, is_pro=True)
         pro_game_thread.start()
         ttk.Button(self, text="View Next Pro Game", style="My.TButton",
@@ -283,7 +283,7 @@ class GameDisplayWindow(ttk.Frame):
 
 def main():
     root = tk.Tk()
-    root.geometry("1200x900")
+    root.geometry("1200x900") # Window size
     root.config(bg="#808c9f")
     root.title("Statistics Tracker and Improvement Manager")
     styles_init()
