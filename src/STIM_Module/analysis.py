@@ -190,19 +190,19 @@ def gold_improvement(avg_gpm, gpm_below_300):
     tips = []
     
     gold_tips = [
-        "Minions: Melee = 22 gold, Caster = 17 gold, Siege = 45 gold, Super = 40 gold.",
+        "Kill some minions for gold: Melee = 22 gold, Caster = 17 gold, Siege = 45 gold, Super = 40 gold.",
         "At the start of the game, a wave of last-hit minions grants an average of 125 gold.",
-        "The best way to get gold is by killing minions.",
-        "Last hitting minions is the best way to get gold.",
-        "Turrets give gold globally to the whole team.",
+        "Look to improve your kills count. Kills provide a lot of gold. Go for assists too.",
+        "Lt hitting minions is the best way to get gold. Keep killing waves of them!",
+        "Steal some jungle camps from your jungler for gold and xp.",
         "The outer turret is worth 100 gold with 250 additional gold for participating.",
         "The inner turret is worth 125 gold with 175 additional gold for participating.",
         "The inhibitor turret is worth 150 gold with 50 additional gold for participating.",
-        "The nexus turret is worth 50 gold.",
         "Destroying the nexus grants you 50 gold! This is important to get!",
         "If you cannot abuse your starting item for gold generation, then buy Ancient Coin instead.",
         "If your ADC is dead, hold the minion wave and last hit to get gold and cs.",
         "Practice first tower lane swapping to open up the map and get more gold",
+        "If you've nearly completed your next item, but still need a little bit of gold, go to a side lane and farm until you've completed that item.",
     ]
     
     if (avg_gpm > 365):
@@ -249,7 +249,7 @@ def gold_diff_improvement(sum_df):
 
 
 # XP
-def xp_improvement(avg_xppm, xp_below_300):
+def xp_improvement(xp_below_300):
     tips = []
     
     xp_tips = [
@@ -257,6 +257,7 @@ def xp_improvement(avg_xppm, xp_below_300):
         "Farm farm farm. Don't wait in bushes, don't go bot/top if a gank/counter isn't a high probability.",
         "Last hitting minions is the best way to get experience.",
         "Hold the minion wave and last hit to get experience and cs.",
+        "Steal some jungle camps from your jungler for gold and xp.",
     ]
     
     if len(xp_below_300) > 0:
@@ -269,30 +270,44 @@ def xp_improvement(avg_xppm, xp_below_300):
 
 
 
-# KILLS # TODO: Add more tips # TODO: Add pro comparison logic
-def kills_improvement(num_kills):
+# KILLS
+def kills_improvement(num_kills, kill_fail):
     tips = []
     
     kills_tips = [
-        
+        "If you see a deep ward in the bottom side of the map and the enemy are overextended, ping your team and try to teleport bot to help them. If you can get a kill or 2 in the bottom lane, you will be ahead, and so will your allies.",
+        "Forcing the enemy bot lane out of their lane will mean they will fall behind in gold and XP as they will not secure any minions. Furthermore, their death timers allow your team to secure tower plates or take the Dragon afterwards.",
+        "If you're a utility Support and someone is in base and is teleporting back to lane, give them a heal or a shield at the last possible second. If they decide to fight when they get back to lane, you will get an assist and free gold.",
+        "Playing around your Ultimate is a very underrated strat. If you have an excellent Ultimate, make sure you're using it. Learn what your power spikes are.",
+        "Grouping with your team is an essential thing to do. Even if you're a split pusher, you should be grouping with your team when they need you.",
+        "If youve nearly completed your next item, but still need a little bit of gold, go to a side lane and farm until you've completed that item: especially if it's going to be very impactful in the upcoming fight.",
+        "Making TP plays in any lane is very impactful. Just make sure that before you teleport, your allies are in a position to follow up.",
+        "If you have a lead, try and snowball the lane to push your lead further."
+        "Gank gank gank. Don't wait in bushes, don't go bot/top if a gank/counter isn't a high probability.",
     ]
     
-    tips.append("Hello, Jaxton Here! This is incomplete. Please help me out!")
+    if num_kills < 5:
+        if kill_fail:
+            tips.append("To beat the PRO: " + random.choice(kills_tips))
+        else:
+            tips.append(random.choice(kills_tips))
+    else:
+        tips.append("You're a pro! You killed " + str(num_kills) + " enemies!")
     
     return tips
 
 
 
-# DEATHS # TODO: Add pro comparison logic
-def deaths_improvement(num_deaths):
+# DEATHS
+def deaths_improvement(num_deaths, death_fail):
     tips = []
     
     death_tips = [
         "Learn and practice better poking strategies with your preferred champion.",
         "Study your teammates' skills and synergize with them in teamfights.",
         "Study what items pro players choose for your champion and practice with them.",
-        "If you're playing a squishier champion, avoid going for risky fights. You'll come worse off."
-        "Study your opponents. By knowing their skills and more optimal stratgies you can form counterplays."
+        "If you're playing a squishier champion, avoid going for risky fights. You'll come worse off.",
+        "Study your opponents. By knowing their skills and more optimal stratgies you can form counterplays.",
         "Pick your fights carefully. Live to fight another day! If behind, stop fighting and focus on farming.",
     ]
     
@@ -306,18 +321,25 @@ def deaths_improvement(num_deaths):
     
     if num_deaths > 10:
         tips.append("You died way too much. Try to avoid dying unnecessarily. It gives the enemy team a huge advantage.")
-        tips.append(random.choice(death_tips))
+        
+        if death_fail:
+            tips.append("To beat the PRO: " + random.choice(death_tips))
+        else:
+            tips.append(random.choice(death_tips))
         tips.append(random.choice(death_tips_b))
     elif num_deaths > 5:
         tips.append("You died a good bit. Each death gives the enemy team an advantage over you.")
-        tips.append(random.choice(death_tips))
+        if death_fail:
+            tips.append("To beat the PRO: " + random.choice(death_tips))
+        else:
+            tips.append(random.choice(death_tips))
     
     return tips
 
 
     
-# ASSISTS # TODO: Add pro comparison logic
-def assists_improvement(num_assists):
+# ASSISTS
+def assists_improvement(num_assists, assist_fail):
     tips = []
     
     assist_tips = [
@@ -328,7 +350,10 @@ def assists_improvement(num_assists):
     ]
     
     if num_assists > 10:
-        tips.append(random.choice(assist_tips))
+        if assist_fail:
+            tips.append("To beat the PRO: " + random.choice(assist_tips))
+        else:
+            tips.append(random.choice(assist_tips))
     else:
         tips.append("You had a good amount of assists. Keep it up!")
     
@@ -419,46 +444,16 @@ def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
     
     # DISPLAY STATS
     tips.append(f'{sum_name} played {champion_played} in {position_played} position in {game_mode} mode.')
-    tips.append(f'Your KDA is {num_kills}/{num_deaths}/{num_assists} with Vision: {vision_score} | Creep: {creep_score} | CC: {cc_score}. Avg. gold/min is {avg_gpm} | Avg. XP/min is {avg_xppm}')
+    tips.append(f'Your KDA is {num_kills}/{num_deaths}/{num_assists} with Vision: {vision_score} | Creep: {creep_score} | CC: {cc_score} | Avg. GPM: {avg_gpm} | Avg. XP/min: {avg_xppm}')
     tips.append("")
-    tips.append("Tips for Improvement:")
     
     
+    # COMPARE TO PRO PLAYER
+    tips.append("Compared to your PRO player:")
     
-    # DISPLAY TWO AREAS OF IMPROVEMENT AT RANDOM
-    improvement_areas = ["GOLD", "GOLD_DIFF", "XP", "DEATHS", "VISION", "CREEP", "ASSISTS"] # , "KILLS", "CC"
-    improvements = random.sample(improvement_areas, 2)
-    
-    for improvement in improvements:
-        match improvement:
-            case 'GOLD' | 1:
-                tips += gold_improvement(avg_gpm, gpm_below_300)
-            case 'GOLD_DIFF' | 2:
-                tips += gold_diff_improvement(sum_df)
-            case 'XP' | 3:
-                tips += xp_improvement(avg_xppm, xp_below_300)
-            case 'KILLS' | 4:
-                tips += kills_improvement(num_kills)
-            case 'DEATHS' | 5:
-                tips += deaths_improvement(num_deaths)
-            case 'ASSISTS' | 6:
-                tips += assists_improvement(num_assists)
-            case 'VISION' | 7:
-                tips += vision_improvement(game_time, vision_score)
-            case 'CREEP' | 8:
-                tips += creep_improvement(game_time, creep_score)
-            case 'CC' | 9:
-                tips += cc_improvement(cc_score)
-        
-        tips.append("")
-    
-    
-    
-    # DISPLAY COMPARISON TO PRO PLAYER
+    # GOLD AND XP COMPARISION
     avg_gpm_diff =  pro_avg_gpm - avg_gpm
-    avg_xppm_diff = pro_avg_xppm - avg_xppm 
-    
-    tips.append("Compared to your pro player:")
+    avg_xppm_diff = pro_avg_xppm - avg_xppm
     
     if (avg_gpm_diff > 0) and (avg_xppm_diff > 0):
         tips.append(f"The PRO had {avg_gpm_diff} more gold and {avg_xppm_diff} more xp per minute than you. Focus on last hits, farm routes, and timers.")
@@ -468,6 +463,7 @@ def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
         tips.append(f"The PRO had {avg_xppm_diff} more xp per minute than you. Focus on last hits, farm routes, and timers.")
     else:
         tips.append("You performed better than the PRO. Try to repeat your last hits, farm routes, and timers like this game.")
+    
     
     # KDA COMPARISON
     if (num_deaths != 0): 
@@ -483,7 +479,7 @@ def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
     kill_fail, death_fail, assist_fail = False, False, False
     
     if (player_ratio > pro_ratio):
-        tips.append(f"You had a better KDA than the PRO. Try to repeat your last hits and farm routes and timers like this game.")
+        tips.append(f"You had a better KDA than the PRO. Try to repeat your last hits, farm routes, and timers like this game.")
     else:
         tips.append(f"The PRO had a better KDA than you. Focus on the mentioned issues below to see where you can improve.")
         if (pro_num_kills > num_kills):
@@ -496,7 +492,65 @@ def just_the_tips(sum_name, sum_game_id, pro_name, pro_game_id):
             death_fail = True
             tips.append(f"You had more deaths than the PRO. This can be ok, but if you're not playing a support character, you may need to adjust your positioning in teamfights and increase your ward vision.")
     
-    #TODO: Rework kill, assist, and death tip control flow to accept input from the pro player comparison
+    
+    # VISION, CREEP, CC COMPARISION
+    if (vision_score > pro_vision_score):
+        tips.append("Your vision, creep, and crowd control scores were better than the PRO. Well done!")
+    else:
+        scores_pro = []
+        if (pro_vision_score > vision_score):
+            scores_pro.append(f"Vision was {pro_vision_score - vision_score} more")
+        elif (pro_vision_score < vision_score):
+            scores_pro.append(f"Vision was {vision_score - pro_vision_score} less")
+        
+        if (pro_creep_score > creep_score):
+            scores_pro.append(f"Creep was {pro_creep_score - creep_score} more")
+        elif (pro_creep_score < creep_score):
+            scores_pro.append(f"Creep was {creep_score - pro_creep_score} less")
+        
+        if (pro_cc_score > cc_score):
+            scores_pro.append(f"CC was {pro_cc_score - cc_score} more")
+        elif (pro_cc_score < cc_score):
+            scores_pro.append(f"CC was {cc_score - pro_cc_score} less")
+        
+        tips.append("The PRO's: " + " | ".join(scores_pro))
+    
+    
+    
+    tips.append("")
+    tips.append("Tips for Improvement:")
+    
+    
+    # DISPLAY TWO AREAS OF IMPROVEMENT AT RANDOM
+    improvement_areas = ["GOLD", "GOLD_DIFF", "XP", "KILLS", "DEATHS", "ASSISTS", "VISION", "CREEP"] # , "CC"
+    improvements = random.sample(improvement_areas, 2)
+    
+    for idx, improvement in enumerate(improvements):
+        match improvement:
+            case 'GOLD' | 1:
+                tips += gold_improvement(avg_gpm, gpm_below_300)
+            case 'GOLD_DIFF' | 2:
+                tips += gold_diff_improvement(sum_df)
+            case 'XP' | 3:
+                tips += xp_improvement(xp_below_300)
+            case 'KILLS' | 4:
+                tips += kills_improvement(num_kills, kill_fail)
+            case 'DEATHS' | 5:
+                tips += deaths_improvement(num_deaths, death_fail)
+            case 'ASSISTS' | 6:
+                tips += assists_improvement(num_assists, assist_fail)
+            case 'VISION' | 7:
+                tips += vision_improvement(game_time, vision_score)
+            case 'CREEP' | 8:
+                tips += creep_improvement(game_time, creep_score)
+            case 'CC' | 9:
+                tips += cc_improvement(cc_score)
+        
+        # if idx != len(improvements) - 1:
+            # tips.append("")
+    
+    
+    
     
     return tips # Just the tips...
 
