@@ -59,7 +59,7 @@ Source Code: "https://github.com/ben-covert2020/STIM_Module"
 <br/>
 
 #### Quickly rebuild application to test code and CLI changes:
-```py -m pip uninstall -y STIM_Module && py -m build && py -m pip install dist/STIM_Module-0.3.0-py3-none-any.whl```
+```py -m pip uninstall -y STIM_Module && py -m build && py -m pip install dist/STIM_Module-1.0.0-py3-none-any.whl```
 
 <br/>
 
@@ -108,7 +108,7 @@ Source Code: "https://github.com/ben-covert2020/STIM_Module"
 <br/>
 
 #### Quickly rebuild application to test code and CLI changes
-```python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-0.3.0-py3-none-any.whl```
+```python3 -m pip uninstall -y STIM_Module && python3 -m build && python3 -m pip install dist/STIM_Module-1.0.0-py3-none-any.whl```
 
 <br/>
 <br/>
