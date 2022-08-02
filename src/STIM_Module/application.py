@@ -32,16 +32,16 @@ def styles_init():
     # Labels Default Styles
     l_style = ttk.Style()
     l_style.configure("Text.TLabel", background="#808c9f", foreground="white", anchor="center",
-                      font=("Californian FB", 12))
+                      font=("Californian FB", 9))
     t_l_style = ttk.Style()
     t_l_style.configure("Title.TLabel", background="#808c9f", foreground="white", anchor="center",
-                        font=("Californian FB", 16, "bold"))
+                        font=("Californian FB", 12, "bold"))
     # Buttons Default Styles
     b_style = ttk.Style()
-    b_style.configure("My.TButton", background="#808c9f", font=("Californian FB", 10))
+    b_style.configure("My.TButton", background="#808c9f", font=("Californian FB", 9))
     # Entry Default Styles NOT WOKRING
     e_style = ttk.Style()
-    e_style.configure("My.TEntry", background="#909cAf", font=("Californian FB", 10), foreground="dark blue")
+    e_style.configure("My.TEntry", background="#909cAf", font=("Californian FB", 9), foreground="dark blue")
 
 
 def popUp(binst, master, invalid=False):
@@ -277,7 +277,7 @@ class GameDisplayWindow(ttk.Frame):
         tips = just_the_tips(sum_name.get(), game_ids[user_game_num], pro_name, pro_game_ids[pro_game_num])
         tip_row_num = 5
         for tip in tips:
-            ttk.Label(self, text=tip, style="Text.TLabel", wraplength=900).grid(column=0, columnspan=5, row=tip_row_num, sticky=(W, N))
+            ttk.Label(self, text=tip, style="Text.TLabel", wraplength=800).grid(column=0, columnspan=5, row=tip_row_num, sticky=(W, N))
             tip_row_num += 1
 
 
