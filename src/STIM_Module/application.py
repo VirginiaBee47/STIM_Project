@@ -188,6 +188,9 @@ class MainWindow(ttk.Frame):
             self.img = ImageTk.PhotoImage(Image.open(img_path).resize((500, 250)))
             ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4, columnspan=3)
 
+        # response = requests.get("https://freepngimg.com/thumb/league_of_legends/27974-5-league-of-legends-logo-transparent-background.png")
+        # self.img = ImageTk.PhotoImage(Image.open(io.BytesIO(response.content)).resize((500, 250)))
+        # ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4, columnspan=3)
 
 class SecondaryWindow(ttk.Frame):  # Summoner Name Verification
     def __init__(self, master, sum_name, pro_name=None):
