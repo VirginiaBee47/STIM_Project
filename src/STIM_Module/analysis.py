@@ -193,7 +193,7 @@ def gold_improvement(avg_gpm, gpm_below_300):
         "Kill some minions for gold: Melee = 22 gold, Caster = 17 gold, Siege = 45 gold, Super = 40 gold.",
         "At the start of the game, a wave of last-hit minions grants an average of 125 gold.",
         "Look to improve your kills count. Kills provide a lot of gold. Go for assists too.",
-        "Lt hitting minions is the best way to get gold. Keep killing waves of them!",
+        "Last hitting minions is the best way to get gold. Keep killing waves of them!",
         "Steal some jungle camps from your jungler for gold and xp.",
         "The outer turret is worth 100 gold with 250 additional gold for participating.",
         "The inner turret is worth 125 gold with 175 additional gold for participating.",
@@ -280,7 +280,7 @@ def kills_improvement(num_kills, kill_fail):
         "If you're a utility Support and someone is in base and is teleporting back to lane, give them a heal or a shield at the last possible second. If they decide to fight when they get back to lane, you will get an assist and free gold.",
         "Playing around your Ultimate is a very underrated strat. If you have an excellent Ultimate, make sure you're using it. Learn what your power spikes are.",
         "Grouping with your team is an essential thing to do. Even if you're a split pusher, you should be grouping with your team when they need you.",
-        "If youve nearly completed your next item, but still need a little bit of gold, go to a side lane and farm until you've completed that item: especially if it's going to be very impactful in the upcoming fight.",
+        "If you've nearly completed your next item, but still need a little bit of gold, go to a side lane and farm until you've completed that item: especially if it's going to be very impactful in the upcoming fight.",
         "Making TP plays in any lane is very impactful. Just make sure that before you teleport, your allies are in a position to follow up.",
         "If you have a lead, try and snowball the lane to push your lead further."
         "Gank gank gank. Don't wait in bushes, don't go bot/top if a gank/counter isn't a high probability.",
