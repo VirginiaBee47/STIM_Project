@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "STIM_Module"
-version = "0.1.0"
+version = "0.3.0"
 authors = [
     { name = "Jaxton 'Jax' Willman", email =  "jaxtonwillman@ufl.edu" },
     { name = "Benjamin 'Ben' Covert", email = "benjamin.covert@ufl.edu" },
@@ -44,9 +44,8 @@ dev = ["build", "bumpver", "twine", "pip-tools", "pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]  # ["."] by default
-include = ["STIM_Module*"]  # ["*"] by default
-exclude = ["STIM_Module.tests*"]  # empty by default
-namespaces = false  # true by default
+# include = ["STIM_Module*"]  # ["*"] by default
+# exclude = ["STIM_Module.tests*"]  # empty by default
 
 [project.scripts]
 lolstats = "STIM_Module.application:main"
@@ -55,7 +54,7 @@ lolstats = "STIM_Module.application:main"
 startapp = "STIM_Module.application:main"
 
 [tool.bumpver]
-current_version = "0.1.0"
+current_version = "0.3.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true

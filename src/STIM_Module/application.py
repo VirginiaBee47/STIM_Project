@@ -274,7 +274,7 @@ class GameDisplayWindow(ttk.Frame):
         
         
         # Display advice and analysis
-        ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=4, sticky=(W, N))
+        ttk.Label(self, text="Advice For This Comparison:", style="Title.TLabel").grid(column=0, row=4, sticky=(W, N), pady=20)
                 
         tips = just_the_tips(sum_name.get(), game_ids[user_game_num], pro_name, pro_game_ids[pro_game_num])
         tip_row_num = 5

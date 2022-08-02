@@ -2,7 +2,7 @@
 # Makefile macros (or variables) are defined a little bit differently than traditional bash, keep in mind that in the Makefile there's top-level Makefile-only syntax, and everything else is bash script syntax.
 PYTHON = python3
 PACKAGE = STIM_Module
-VERSION = 0.1.0
+VERSION = 0.3.0
 
 # Defining an array variable
 FILES = input output
