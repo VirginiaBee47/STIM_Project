@@ -181,7 +181,9 @@ class MainWindow(ttk.Frame):
         ttk.Label(self, text=' '.join(credits), style="Title.TLabel", anchor="center", justify="left", wraplength=300).grid(column=2, row=2, sticky=N)
         
         # Load image
-        img_path = "src/STIM_Module/assets/Images/lol_image.jpg"
+        ROOT_DIR = os.path.abspath(os.path.dirname(__file__)) # This is your Project Root
+        img_path = os.path.join(ROOT_DIR, "assets/Images/lol_image.jpg")
+        
         if os.path.exists(img_path):
             self.img = ImageTk.PhotoImage(Image.open(img_path).resize((500, 250)))
             ttk.Label(self, image=self.img, anchor="center", borderwidth=0, background="#808c9f").grid(column=0, row=4, columnspan=3)
