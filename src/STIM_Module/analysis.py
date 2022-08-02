@@ -282,7 +282,7 @@ def kills_improvement(num_kills, kill_fail):
         "Grouping with your team is an essential thing to do. Even if you're a split pusher, you should be grouping with your team when they need you.",
         "If you've nearly completed your next item, but still need a little bit of gold, go to a side lane and farm until you've completed that item: especially if it's going to be very impactful in the upcoming fight.",
         "Making TP plays in any lane is very impactful. Just make sure that before you teleport, your allies are in a position to follow up.",
-        "If you have a lead, try and snowball the lane to push your lead further."
+        "If you have a lead, try and snowball the lane to push your lead further.",
         "Gank gank gank. Don't wait in bushes, don't go bot/top if a gank/counter isn't a high probability.",
     ]
     
@@ -366,7 +366,7 @@ def vision_improvement(game_time, vision_score):
     tips = []
     
     vision_tips = [
-        "You obtain one Vision Score for each minute that your ward survives, so it's key to please at least two.",
+        "You obtain one Vision Score for each minute that your ward survives, so it's key to place at least two.",
         "Consider the distance between your wards and your base, the distance between them, and the time it passes between enemy champion discoveries from them.",
         "Increase your vision by placing control wards.",
         "Increase your vision by finding invisible enemy champions and epic monsters.",

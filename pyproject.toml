@@ -44,9 +44,8 @@ dev = ["build", "bumpver", "twine", "pip-tools", "pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]  # ["."] by default
-include = ["STIM_Module*"]  # ["*"] by default
-exclude = ["STIM_Module.tests*"]  # empty by default
-namespaces = false  # true by default
+# include = ["STIM_Module*"]  # ["*"] by default
+# exclude = ["STIM_Module.tests*"]  # empty by default
 
 [project.scripts]
 lolstats = "STIM_Module.application:main"
