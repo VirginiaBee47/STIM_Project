@@ -1,2 +1,2 @@
-API_KEY = "RGAPI-89916bde-63e6-4900-a1e6-df36bc44345e"
+API_KEY = "RGAPI-73166635-a1b8-4085-984c-7edd8a3f9b31"
 # This needs to be protected please
