@@ -18,15 +18,16 @@ QUEUE = []
 def respect_rate_limit(url):
     # print(f'call made: {str(url)[:-51]}')
     response = rq.get(url)
-    pattern = re.compile(r'(\d+):1,(\d+):120')
-    for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
-        one_sec_progress = int(match.group(1))
-        two_min_progress = int(match.group(2))
-
-    if one_sec_progress >= 18 or two_min_progress >= 95:
-        raise RateLimitException(one_sec_progress, two_min_progress)
-    else:
-        return response
+    #pattern = re.compile(r'(\d+):1,(\d+):120')
+    #for match in pattern.finditer(response.headers['X-App-Rate-Limit-Count']):
+    #    one_sec_progress = int(match.group(1))
+    #    two_min_progress = int(match.group(2))
+    #
+    #if one_sec_progress >= 18 or two_min_progress >= 95:
+    #    raise RateLimitException(one_sec_progress, two_min_progress)
+    #else:
+    #    return response
+    return response
 
 
 def check_summoner_exists(summoner_name):
